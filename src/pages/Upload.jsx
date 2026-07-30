@@ -1,171 +1,190 @@
 import { useState } from 'react';
 import { useNavigate } from 'react';
-import { ArrowRight, User, Shirt, Camera } from 'lucide-react';
+import { Upload as UploadIcon, Image as ImageIcon, Info, CheckCircle, FileText, ArrowRight, Shield, RefreshCw } from 'lucide-react';
 import { SEO } from '@/components/common/SEO';
-import { useSimulation } from '@/hooks/useSimulation';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { Button } from '@/components/ui/Button';
-import { ErrorMessage } from '@/components/ui/ErrorMessage';
-import { Dropzone } from '@/features/upload/Dropzone';
-import { ImagePreviewCard } from '@/features/upload/ImagePreviewCard';
-import { GarmentSelector } from '@/features/upload/GarmentSelector';
-import { SimulationSettingsForm } from '@/features/upload/SimulationSettingsForm';
-import { AIModelStatusCard } from '@/features/simulation/AIModelStatusCard';
-import { ModelLoader } from '@/features/simulation/ModelLoader';
-import { WebcamCaptureModal } from '@/features/upload/WebcamCaptureModal';
+import { Card } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { APP_CONFIG } from '@/constants/appConfig';
 
 export default function Upload() {
   const navigate = useNavigate();
-  const {
-    userAvatar,
-    setUserAvatar,
-    garmentImage,
-    setGarmentImage,
-    settings,
-    updateSettings,
-    isProcessing,
-    error,
-    setError,
-    modelStatus,
-    runSimulation,
-  } = useSimulation();
-
-  const [isWebcamOpen, setIsWebcamOpen] = useState(false);
-
-  const handleStartSimulation = async () => {
-    if (!userAvatar) {
-      setError('Please upload or select an avatar image first.');
-      return;
-    }
-    if (!garmentImage) {
-      setError('Please select or upload a garment image to try on.');
-      return;
-    }
-
-    const result = await runSimulation();
-    if (result) {
-      navigate('/result');
-    }
-  };
-
-  if (isProcessing) {
-    return (
-      <div className="max-w-4xl mx-auto py-8">
-        <SEO title="Simulating Try-On..." />
-        <ModelLoader />
-      </div>
-    );
-  }
+  const [isDragOver, setIsDragOver] = useState(false);
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto">
       <SEO
-        title="Upload & Prepare"
-        description="Upload your model avatar and garment image to configure Virtual Wear AI parameters."
+        title="Upload Image"
+        description="Upload your target avatar image for Virtual Wear AI simulation."
       />
 
       <SectionTitle
-        badge="Virtual Wear Studio"
-        title="Upload Avatar & Garment Image"
-        subtitle="Prepare your input images and customize fit settings for neural try-on processing."
+        badge="Upload Station"
+        title="Upload Image Interface"
+        subtitle="Frontend upload UI for selecting model avatars and garment photos for virtual fitting."
       />
 
-      <AIModelStatusCard status={modelStatus} />
-
-      {error && <ErrorMessage title="Simulation Error" message={error} onRetry={() => setError(null)} />}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column: Avatar Upload & Webcam Capture */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-white font-bold text-sm">
-              <User size={18} className="text-indigo-400" />
-              <span>1. User Avatar Image</span>
+      {/* Main 2-Panel Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        {/* LEFT PANEL: Upload Area */}
+        <div className="lg:col-span-7 space-y-6">
+          <Card hover={false} className="border border-slate-800 bg-slate-900/60 p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center font-bold">
+                  <UploadIcon size={18} />
+                </div>
+                <h3 className="text-base font-bold text-white">Large Upload Area</h3>
+              </div>
+              <Badge variant="primary" size="sm">
+                UI Mockup Only
+              </Badge>
             </div>
-            {!userAvatar && (
+
+            {/* Drag & Drop Upload Zone */}
+            <div
+              className={`relative border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all duration-200 ${
+                isDragOver
+                  ? 'border-blue-500 bg-blue-500/10 scale-[0.99]'
+                  : 'border-slate-800 hover:border-blue-500/50 bg-slate-950/60'
+              }`}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragOver(false);
+              }}
+            >
+              {/* Placeholder Image Box */}
+              <div className="w-32 h-32 rounded-2xl bg-slate-900 border border-slate-800 flex flex-col items-center justify-center text-slate-500 mb-4 overflow-hidden group shadow-inner">
+                <ImageIcon size={40} className="text-slate-600 mb-1 group-hover:scale-110 transition-transform" />
+                <span className="text-[10px] font-mono text-slate-500 uppercase">Placeholder</span>
+              </div>
+
+              {/* Drag & Drop Area Heading & Description */}
+              <h4 className="text-sm font-semibold text-white mb-1">
+                Drag & Drop Area
+              </h4>
+              <p className="text-xs text-slate-400 max-w-xs mb-4">
+                Drag your avatar or garment photo here, or click the button below to select from your device.
+              </p>
+
+              {/* Upload Button */}
+              <Button
+                variant="primary"
+                size="md"
+                leftIcon={<UploadIcon size={16} />}
+                onClick={() => {
+                  /* Non-functional UI button per phase scope */
+                }}
+                className="mb-4"
+              >
+                Upload Button
+              </Button>
+
+              {/* Supported Formats Text */}
+              <div className="text-[11px] text-slate-500 flex items-center gap-1.5 font-mono">
+                <FileText size={12} className="text-blue-400" />
+                <span>Supported Formats Text: JPG, PNG, WEBP up to 10MB</span>
+              </div>
+            </div>
+
+            {/* CTA to view sample Result page */}
+            <div className="pt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80">
+              <span>Ready to inspect the comparison interface?</span>
               <Button
                 variant="outline"
                 size="sm"
-                leftIcon={<Camera size={14} />}
-                onClick={() => setIsWebcamOpen(true)}
+                rightIcon={<ArrowRight size={14} />}
+                onClick={() => navigate('/result')}
               >
-                Take Webcam Photo
+                Proceed to Result Page
               </Button>
-            )}
-          </div>
-
-          {userAvatar ? (
-            <ImagePreviewCard
-              title="Selected Model Avatar"
-              imageData={userAvatar}
-              onRemove={() => setUserAvatar(null)}
-            />
-          ) : (
-            <Dropzone
-              label="Upload Person / Avatar Image"
-              subtitle="Clear full-body or half-body portrait photo"
-              onImageSelected={(data) => setUserAvatar(data)}
-            />
-          )}
-        </div>
-
-        {/* Right Column: Garment Upload / Presets */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-white font-bold text-sm">
-            <Shirt size={18} className="text-pink-400" />
-            <span>2. Apparel Garment Image</span>
-          </div>
-
-          {garmentImage ? (
-            <ImagePreviewCard
-              title="Selected Garment Image"
-              imageData={garmentImage}
-              onRemove={() => setGarmentImage(null)}
-            />
-          ) : (
-            <div className="space-y-6">
-              <Dropzone
-                label="Upload Custom Garment Photo"
-                subtitle="Flat-lay garment or apparel product image"
-                onImageSelected={(data) => setGarmentImage(data)}
-              />
-              <GarmentSelector
-                selectedGarment={garmentImage}
-                onSelectGarment={(garment) => setGarmentImage(garment)}
-              />
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Parameter Settings Form */}
-      <SimulationSettingsForm settings={settings} onChangeSettings={updateSettings} />
-
-      {/* Start Simulation Action Bar */}
-      <div className="glass-panel p-6 rounded-2xl border border-indigo-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="text-xs text-slate-300">
-          <span className="font-semibold text-white block">Ready for Simulation?</span>
-          <span>Both avatar and garment images configured.</span>
+          </Card>
         </div>
 
-        <Button
-          variant="gradient"
-          size="lg"
-          rightIcon={<ArrowRight size={20} />}
-          isDisabled={!userAvatar || !garmentImage}
-          onClick={handleStartSimulation}
-          className="w-full sm:w-auto"
-        >
-          Start AI Wear Simulation
-        </Button>
-      </div>
+        {/* RIGHT PANEL: Instructions & Metadata Card */}
+        <div className="lg:col-span-5 space-y-6">
+          
+          {/* Instructions Card */}
+          <Card hover={false} className="border border-slate-800 bg-slate-900/60 p-6 space-y-6">
+            <div className="flex items-center gap-2 pb-3 border-b border-slate-800">
+              <Info size={18} className="text-purple-400" />
+              <h3 className="text-base font-bold text-white">Instructions Card</h3>
+            </div>
 
-      {/* Webcam Modal Overlay */}
-      <WebcamCaptureModal
-        isOpen={isWebcamOpen}
-        onClose={() => setIsWebcamOpen(false)}
-        onPhotoCaptured={(photo) => setUserAvatar(photo)}
-      />
+            {/* Image Requirements */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle size={14} className="text-emerald-400" /> Image Requirements
+              </h4>
+              <ul className="space-y-1.5 text-xs text-slate-400">
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 font-bold">•</span>
+                  <span>Full-body or half-body portrait photo in upright posture.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 font-bold">•</span>
+                  <span>Well-lit environment with minimal heavy shadows or occlusions.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-blue-400 font-bold">•</span>
+                  <span>Garment images should be flat-lay or product catalog style.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Tips */}
+            <div className="space-y-2 pt-2 border-t border-slate-800/60">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                <Shield size={14} className="text-amber-400" /> Tips for Best AI Fitting
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                For optimal posture detection and fabric drape, ensure high resolution input photos with clear contrast between background and clothing.
+              </p>
+            </div>
+
+            {/* Supported Formats & Maximum File Size Specs */}
+            <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-800/60 text-xs">
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                <span className="text-[11px] text-slate-500 block mb-0.5">Supported Formats</span>
+                <span className="font-semibold text-slate-200 font-mono">JPG, PNG, WEBP</span>
+              </div>
+              <div className="bg-slate-950/80 p-3 rounded-xl border border-slate-800">
+                <span className="text-[11px] text-slate-500 block mb-0.5">Maximum File Size</span>
+                <span className="font-semibold text-blue-400 font-mono">{APP_CONFIG.UPLOAD.MAX_FILE_SIZE_MB} MB</span>
+              </div>
+            </div>
+
+            {/* Recent Upload Placeholder */}
+            <div className="space-y-3 pt-2 border-t border-slate-800/60">
+              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center justify-between">
+                <span>Recent Upload Placeholder</span>
+                <RefreshCw size={12} className="text-slate-500" />
+              </h4>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 2, 3].map((item) => (
+                  <div
+                    key={item}
+                    className="aspect-square rounded-xl bg-slate-950 border border-slate-800/80 flex flex-col items-center justify-center p-2 text-slate-600 hover:border-slate-700 transition-colors cursor-pointer group"
+                  >
+                    <ImageIcon size={20} className="mb-1 group-hover:text-blue-400 transition-colors" />
+                    <span className="text-[9px] font-mono text-slate-500">Item #{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+      </div>
     </div>
   );
 }
