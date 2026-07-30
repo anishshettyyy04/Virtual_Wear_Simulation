@@ -1,0 +1,89 @@
+import { NavLink } from 'react-router-dom';
+import { Shirt, Menu, Sparkles, Cpu } from 'lucide-react';
+import { APP_CONFIG } from '@/constants/appConfig';
+
+export const Navbar = ({ onOpenMobileMenu }) => {
+  const navLinks = [
+    { label: 'Home', path: '/' },
+    { label: 'Upload', path: '/upload' },
+    { label: 'Result', path: '/result' },
+  ];
+
+  return (
+    <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Brand Logo */}
+          <NavLink
+            to="/"
+            className="flex items-center gap-2.5 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 p-0.5 shadow-lg shadow-indigo-600/30 group-hover:scale-105 transition-transform">
+              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+                <Shirt
+                  size={20}
+                  className="text-indigo-400 group-hover:text-pink-400 transition-colors"
+                />
+              </div>
+            </div>
+            <div className="flex flex-col">
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-lg text-white tracking-tight font-display">
+                  {APP_CONFIG.NAME}
+                </span>
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  <Sparkles size={10} /> AI
+                </span>
+              </div>
+              <span className="text-[10px] text-slate-400 -mt-1 hidden sm:block">
+                Virtual Try-On Engine
+              </span>
+            </div>
+          </NavLink>
+
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex items-center gap-1 bg-slate-900/60 p-1.5 rounded-full border border-slate-800/60">
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.path}
+                to={link.path}
+                className={({ isActive }) =>
+                  `px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* AI Model Status Badge & CTA */}
+          <div className="hidden lg:flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <Cpu size={14} />
+              <span>Diffusion Engine Online</span>
+            </div>
+          </div>
+
+          {/* Mobile Menu Toggle Button */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={onOpenMobileMenu}
+              className="p-2 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition-colors"
+              aria-label="Open Mobile Menu"
+            >
+              <Menu size={20} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+};
