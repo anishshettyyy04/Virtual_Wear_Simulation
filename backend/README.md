@@ -32,7 +32,7 @@ Production-grade, modular **FastAPI** backend architecture for the **AI-Powered 
 backend/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                    # FastAPI app initialization, CORS, middleware, lifespan
+│   ├── main.py                    # FastAPI application initialization, lifespan, CORS, middleware
 │   ├── api/
 │   │   ├── __init__.py
 │   │   └── v1/
@@ -76,7 +76,7 @@ backend/
 ### 1. Prerequisites
 - **Python**: `v3.11` or higher installed.
 
-### 2. Create Virtual Environment & Install Dependencies
+### 2. Create Virtual Environment & Activate
 
 ```bash
 # Navigate to backend directory
@@ -84,29 +84,43 @@ cd backend
 
 # Create virtual environment
 python -m venv .venv
+```
 
-# Activate virtual environment
-# Windows (PowerShell):
-.venv\Scripts\Activate.ps1
-# macOS/Linux:
-source .venv/bin/activate
+#### Activating Virtual Environment by Operating System:
 
-# Install requirements
+- **Windows (PowerShell)**:
+  ```powershell
+  .\.venv\Scripts\Activate.ps1
+  ```
+- **Windows (Command Prompt / CMD)**:
+  ```cmd
+  .venv\Scripts\activate.bat
+  ```
+- **macOS / Linux**:
+  ```bash
+  source .venv/bin/activate
+  ```
+
+### 3. Install Dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
-### 3. Environment Configuration
+### 4. Environment Configuration
 
 Copy `.env.example` to `.env`:
 
-```bash
-# Windows (Command Prompt / PowerShell):
-copy .env.example .env
-# Linux / macOS:
-cp .env.example .env
-```
+- **Windows (PowerShell / CMD)**:
+  ```cmd
+  copy .env.example .env
+  ```
+- **Linux / macOS**:
+  ```bash
+  cp .env.example .env
+  ```
 
-Verify key variables in `.env`:
+Verify `.env` settings:
 ```env
 APP_NAME="Virtual Wear Simulation API"
 APP_VERSION="1.0.0"
