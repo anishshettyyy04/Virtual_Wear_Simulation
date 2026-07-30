@@ -1,4 +1,4 @@
-# Virtual Wear Simulation – Backend Foundation API
+# Virtual Wear Simulation – Backend API
 
 Production-grade, modular **FastAPI** backend architecture for the **AI-Powered Virtual Wear Simulation** application.
 
@@ -7,12 +7,68 @@ Production-grade, modular **FastAPI** backend architecture for the **AI-Powered 
 ## 🌟 Features & Architecture
 
 - **Python 3.11+ & FastAPI**: High-performance asynchronous web framework with automatic OpenAPI documentation.
-- **Aggregated Router Architecture**: Modular routing structure via `app/api/v1/router.py` for effortless scaling (e.g., adding `images.py`, `try_on.py`, `jobs.py`).
+- **Aggregated Router Architecture**: Modular routing structure via `app/api/v1/router.py` for effortless scaling.
 - **Pydantic v2 Settings Management**: Strict environment loading and type validation for ports, origins, upload limits, and logging.
 - **Request Tracing Middleware**: Automatic UUID generation and header propagation via `X-Request-ID`.
 - **FastAPI Lifespan Hooks**: Context manager managing application startup and graceful shutdown resources.
 - **Standardized Response Contracts**: Explicit Pydantic response models (`HealthResponse`, `StandardErrorResponse`) with machine-readable error codes (`NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL_SERVER_ERROR`).
-- **Comprehensive Test Suite**: Pytest test cases covering health status, CORS headers, Request IDs, and error handlers.
+- **Model-Agnostic AI Pipeline Architecture (Phase 1.2.1)**: Internal service-layer abstraction for virtual try-on processing with concurrent stage execution.
+- **Comprehensive Test Suite**: Pytest test cases covering health status, CORS headers, Request IDs, error handlers, AI schemas, interfaces, stage ordering, and pipeline concurrency.
+
+---
+
+## 🧠 AI Pipeline Architecture (Phase 1.2.1)
+
+The backend AI pipeline is designed around a model-agnostic, modular flow that decouples stage orchestration from specific neural network engines (e.g. CatVTON, IDM-VTON, StableVITON, OOTDiffusion).
+
+### Conceptual Pipeline Flow
+
+```text
+Person Input + Garment Input
+             │
+             ▼
+       Preprocessing
+             │
+             ├──────────────────────────┐
+             ▼                          ▼
+       Human Parsing             Pose Estimation
+             │                          │
+             └─────────────┬────────────┘
+                           │
+                           ▼
+                 Virtual Try-On Engine
+                           │
+                           ▼
+                    Postprocessing
+                           │
+                           ▼
+                  Final Try-On Result
+```
+
+### Stage Responsibilities & Data Contracts
+
+1. **Preprocessing (`BasePreprocessor`)**: Validates input resources and normalizes person avatar and garment properties into `PreprocessingResult` containing `person_image_ref` and `garment_image_ref`.
+2. **Human Parsing (`BaseHumanParser`)**: Extracts body segmentation mask reference (`mask_ref`) and category labels into `HumanParsingResult`.
+3. **Pose Estimation (`BasePoseEstimator`)**: Identifies 33 body pose landmarks and exports `pose_ref` into `PoseEstimationResult`. Executed **concurrently** with Human Parsing via `asyncio.gather`.
+4. **Virtual Try-On Engine (`BaseTryOnEngine`)**: Performs neural apparel warp and fusion using preprocessed resources, parsing masks, and pose landmarks, producing `RawTryOnOutput`.
+5. **Postprocessing (`BasePostprocessor`)**: Applies format encoding, image sharpening, and quality resolution scaling into `PostprocessingResult`.
+
+---
+
+## 🎯 Future AI Non-Functional Requirements
+
+### 1. Identity Preservation
+Future real VTON engine implementations must preserve subject identity characteristics without distortion:
+- Facial structure, expression, and features
+- Hair style and texture
+- Skin tone and natural appearance
+- Body proportions and non-garment regions (background, arms, posture)
+
+### 2. Garment Fidelity
+Future real VTON engine implementations must preserve garment characteristics:
+- Color palette and fabric texture
+- Patterns, prints, logos, and graphics
+- Garment silhouette, neckline, and sleeve structure
 
 ---
 
@@ -31,39 +87,33 @@ Production-grade, modular **FastAPI** backend architecture for the **AI-Powered 
 ```text
 backend/
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                    # FastAPI application initialization, lifespan, CORS, middleware
-│   ├── api/
-│   │   ├── __init__.py
-│   │   └── v1/
-│   │       ├── __init__.py
-│   │       ├── router.py          # Aggregated v1 API router
-│   │       └── routes/
-│   │           ├── __init__.py
-│   │           └── health.py      # GET /api/v1/health route
-│   ├── config/
-│   │   ├── __init__.py
-│   │   └── settings.py        # Typed settings with Pydantic validators
+│   ├── main.py                    # FastAPI app initialization, lifespan, CORS, middleware
+│   ├── api/v1/
+│   │   ├── router.py              # Aggregated v1 API router
+│   │   └── routes/health.py       # GET /api/v1/health route
+│   ├── config/settings.py         # Pydantic BaseSettings with typed validators
 │   ├── middleware/
-│   │   ├── __init__.py
-│   │   ├── error_handler.py   # Global 404, 422, 500 exception handlers
-│   │   └── request_id.py      # X-Request-ID tracing middleware
+│   │   ├── error_handler.py       # Global 404, 422, 500 exception handlers
+│   │   └── request_id.py          # X-Request-ID tracing middleware
 │   ├── schemas/
-│   │   ├── __init__.py
-│   │   └── response.py        # HealthResponse & StandardErrorResponse schemas
-│   ├── services/              # Reserved for Phase 1.2+ AI inference services
-│   ├── models/                # Reserved for Phase 1.2+ database models
-│   └── utils/
-│       ├── __init__.py
-│       └── logger.py          # Centralized logger (timestamp | LOG_LEVEL | module | message)
+│   │   ├── response.py            # HealthResponse & StandardErrorResponse schemas
+│   │   └── ai.py                  # Internal AI pipeline contracts (PersonInput, TryOnResult)
+│   ├── services/ai/
+│   │   ├── pipeline.py            # VirtualWearPipeline orchestrator
+│   │   ├── exceptions.py          # AIPipelineError exception hierarchy
+│   │   ├── interfaces/            # Abstract base classes (BasePreprocessor, BaseTryOnEngine)
+│   │   └── mock/                  # Lightweight deterministic mock stage implementations
+│   ├── models/                    # Reserved for Phase 1.2+ database models
+│   └── utils/logger.py            # Centralized logger (timestamp | LOG_LEVEL | module | message)
 ├── tests/
-│   ├── __init__.py
-│   ├── test_health.py         # Health endpoint tests
-│   ├── test_errors.py         # 404 & 422 error handler tests
-│   └── test_middleware.py     # CORS & Request ID header tests
+│   ├── test_health.py             # Health endpoint tests
+│   ├── test_errors.py             # Error handler tests
+│   ├── test_middleware.py         # CORS & Request ID header tests
+│   └── ai/
+│       ├── test_schemas.py        # Schema validation tests
+│       ├── test_interfaces.py     # Interface inheritance tests
+│       └── test_pipeline.py       # Pipeline E2E, stage ordering & concurrency tests
 ├── .env.example
-├── .env
-├── .gitignore
 ├── pyproject.toml
 ├── README.md
 └── requirements.txt
@@ -79,27 +129,14 @@ backend/
 ### 2. Create Virtual Environment & Activate
 
 ```bash
-# Navigate to backend directory
 cd backend
-
-# Create virtual environment
 python -m venv .venv
 ```
 
-#### Activating Virtual Environment by Operating System:
-
-- **Windows (PowerShell)**:
-  ```powershell
-  .\.venv\Scripts\Activate.ps1
-  ```
-- **Windows (Command Prompt / CMD)**:
-  ```cmd
-  .venv\Scripts\activate.bat
-  ```
-- **macOS / Linux**:
-  ```bash
-  source .venv/bin/activate
-  ```
+#### Activating Virtual Environment:
+- **Windows (PowerShell)**: `.\.venv\Scripts\Activate.ps1`
+- **Windows (CMD)**: `.venv\Scripts\activate.bat`
+- **macOS / Linux**: `source .venv/bin/activate`
 
 ### 3. Install Dependencies
 
@@ -109,49 +146,26 @@ pip install -r requirements.txt
 
 ### 4. Environment Configuration
 
-Copy `.env.example` to `.env`:
-
-- **Windows (PowerShell / CMD)**:
-  ```cmd
-  copy .env.example .env
-  ```
-- **Linux / macOS**:
-  ```bash
-  cp .env.example .env
-  ```
-
-Verify `.env` settings:
-```env
-APP_NAME="Virtual Wear Simulation API"
-APP_VERSION="1.0.0"
-APP_ENV=development
-DEBUG=true
-API_V1_PREFIX=/api/v1
-HOST=0.0.0.0
-PORT=8000
-FRONTEND_URL=http://localhost:5173
-CORS_ORIGINS=["http://localhost:5173", "http://127.0.0.1:5173"]
-MAX_UPLOAD_SIZE_MB=10
-LOG_LEVEL=INFO
+```bash
+# Windows
+copy .env.example .env
+# Linux / macOS
+cp .env.example .env
 ```
 
 ---
 
-## 🏃 Running the Application
+## 🏃 Running Application & Test Suite
 
-Start the Uvicorn ASGI development server:
+### Start Uvicorn Server
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
 - **Health Endpoint**: `GET http://localhost:8000/api/v1/health`
-- **Swagger Interactive API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-
----
-
-## 🧪 Testing & Code Quality
 
 ### Run Pytest Suite
 
@@ -159,24 +173,9 @@ uvicorn app.main:app --reload
 pytest
 ```
 
-### Run Ruff Linter Check
+### Run Linter & Formatter
 
 ```bash
 ruff check .
-```
-
-### Run Black Formatting Verification
-
-```bash
 black --check .
 ```
-
----
-
-## 📋 API Endpoints Overview
-
-| Method | Endpoint | Description | Response Model |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Lightweight service health & version metadata | `HealthResponse` |
-| `GET` | `/docs` | Interactive Swagger UI documentation | HTML |
-| `GET` | `/redoc` | ReDoc API specification documentation | HTML |
