@@ -13,62 +13,66 @@ Production-grade, modular **FastAPI** backend architecture for the **AI-Powered 
 - **FastAPI Lifespan Hooks**: Context manager managing application startup and graceful shutdown resources.
 - **Standardized Response Contracts**: Explicit Pydantic response models (`HealthResponse`, `StandardErrorResponse`) with machine-readable error codes (`NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL_SERVER_ERROR`).
 - **Model-Agnostic AI Pipeline Architecture (Phase 1.2.1)**: Internal service-layer abstraction for virtual try-on processing with concurrent stage execution.
-- **Comprehensive Test Suite**: Pytest test cases covering health status, CORS headers, Request IDs, error handlers, AI schemas, interfaces, stage ordering, and pipeline concurrency.
+- **Real Image Preprocessing Service (Phase 1.2.2)**: Production Pillow-based image normalization (`ImagePreprocessor`) featuring EXIF transpose, RGBA transparency compositing onto white, proportional `FIT_WITHIN` resizing, and transaction-like atomic commits.
+- **Comprehensive Test Suite**: Pytest test cases covering health status, CORS headers, Request IDs, error handlers, AI schemas, interfaces, stage ordering, pipeline concurrency, image preprocessing unit tests, and pipeline integration tests.
 
 ---
 
-## 🧠 AI Pipeline Architecture (Phase 1.2.1)
-
-The backend AI pipeline is designed around a model-agnostic, modular flow that decouples stage orchestration from specific neural network engines (e.g. CatVTON, IDM-VTON, StableVITON, OOTDiffusion).
-
-### Conceptual Pipeline Flow
+## 🧠 AI Pipeline Architecture
 
 ```text
-Person Input + Garment Input
+Person ──────┐
+             ▼
+      ImagePreprocessor (Real - Phase 1.2.2)
+             │
+Garment ─────┘
+             │
+      ┌──────┴──────┐
+      ▼             ▼
+ Mock Parser    Mock Pose
+      └──────┬──────┘
+             ▼
+      Mock Try-On Engine
              │
              ▼
-       Preprocessing
+     Mock Postprocessor
              │
-             ├──────────────────────────┐
-             ▼                          ▼
-       Human Parsing             Pose Estimation
-             │                          │
-             └─────────────┬────────────┘
-                           │
-                           ▼
-                 Virtual Try-On Engine
-                           │
-                           ▼
-                    Postprocessing
-                           │
-                           ▼
-                  Final Try-On Result
+             ▼
+        TryOnResult
 ```
 
-### Stage Responsibilities & Data Contracts
-
-1. **Preprocessing (`BasePreprocessor`)**: Validates input resources and normalizes person avatar and garment properties into `PreprocessingResult` containing `person_image_ref` and `garment_image_ref`.
-2. **Human Parsing (`BaseHumanParser`)**: Extracts body segmentation mask reference (`mask_ref`) and category labels into `HumanParsingResult`.
-3. **Pose Estimation (`BasePoseEstimator`)**: Identifies 33 body pose landmarks and exports `pose_ref` into `PoseEstimationResult`. Executed **concurrently** with Human Parsing via `asyncio.gather`.
-4. **Virtual Try-On Engine (`BaseTryOnEngine`)**: Performs neural apparel warp and fusion using preprocessed resources, parsing masks, and pose landmarks, producing `RawTryOnOutput`.
-5. **Postprocessing (`BasePostprocessor`)**: Applies format encoding, image sharpening, and quality resolution scaling into `PostprocessingResult`.
+### Stage Implementation Status
+- **Preprocessing (`ImagePreprocessor`)**: **REAL** (Pillow-based validation, EXIF transpose, RGB normalization, `FIT_WITHIN` resizing, atomic output writes).
+- **Human Parsing (`BaseHumanParser`)**: **MOCK** (`MockHumanParser`).
+- **Pose Estimation (`BasePoseEstimator`)**: **MOCK** (`MockPoseEstimator`).
+- **Virtual Try-On Engine (`BaseTryOnEngine`)**: **MOCK** (`MockTryOnEngine`).
+- **Postprocessing (`BasePostprocessor`)**: **MOCK** (`MockPostprocessor`).
 
 ---
 
-## 🎯 Future AI Non-Functional Requirements
+## 🖼️ Image Preprocessing Details (Phase 1.2.2)
 
-### 1. Identity Preservation
-Future real VTON engine implementations must preserve subject identity characteristics without distortion:
-- Facial structure, expression, and features
-- Hair style and texture
-- Skin tone and natural appearance
-- Body proportions and non-garment regions (background, arms, posture)
+### Processing Features
+1. **Input Safety Limits**: Validates file size (`AI_INPUT_MAX_FILE_SIZE_MB`) and dimensions (`AI_INPUT_MAX_WIDTH` x `AI_INPUT_MAX_HEIGHT`).
+2. **EXIF Orientation**: Applies `ImageOps.exif_transpose` to fix mobile photo orientation before reading dimensions.
+3. **RGB & Alpha Normalization**: Converts all image modes (`RGBA`, `P`, `L`, `CMYK`) to `RGB`. Source alpha transparency is composited onto a solid white background `(255, 255, 255)`.
+4. **Proportional Resizing (`FIT_WITHIN`)**: Scales down oversized images to `AI_PREPROCESS_MAX_WIDTH` x `AI_PREPROCESS_MAX_HEIGHT` using `LANCZOS` resampling while preserving aspect ratio. Small images below target bounds are **not** upscaled.
+5. **Atomic Commit & Collision Resistance**: Generates safe output paths using sanitized IDs + short SHA-256 hashes (e.g. `proc_person_user123_a82f19c4.jpg`). Commits both person and garment artifacts atomically using transaction-like replacement.
 
-### 2. Garment Fidelity
-Future real VTON engine implementations must preserve garment characteristics:
-- Color palette and fabric texture
-- Patterns, prints, logos, and graphics
-- Garment silhouette, neckline, and sleeve structure
+---
+
+## ⚙️ Configuration Variables
+
+| Setting | Default | Description |
+| :--- | :--- | :--- |
+| `AI_INPUT_MAX_FILE_SIZE_MB` | `20.0` | Maximum allowed input image file size in megabytes |
+| `AI_INPUT_MAX_WIDTH` | `8192` | Maximum allowed input image width safety bound |
+| `AI_INPUT_MAX_HEIGHT` | `8192` | Maximum allowed input image height safety bound |
+| `AI_PREPROCESS_MAX_WIDTH` | `1024` | Maximum preprocessed output image target width |
+| `AI_PREPROCESS_MAX_HEIGHT` | `1024` | Maximum preprocessed output image target height |
+| `AI_PREPROCESS_OUTPUT_FORMAT` | `"JPEG"` | Preprocessed output image format (`JPEG`, `PNG`, `WEBP`) |
+| `AI_PREPROCESS_JPEG_QUALITY` | `95` | JPEG encoding quality (1–100) |
+| `AI_PROCESSED_DIR` | `"data/processed"` | Output directory for preprocessed image artifacts |
 
 ---
 
@@ -77,6 +81,7 @@ Future real VTON engine implementations must preserve garment characteristics:
 - **Framework**: FastAPI (v0.115+) & Starlette
 - **Server**: Uvicorn (ASGI)
 - **Validation**: Pydantic v2 & `pydantic-settings`
+- **Image Processing**: Pillow (v10.4+)
 - **Testing**: Pytest & HTTPX (`AsyncClient`)
 - **Quality & Format**: Ruff & Black
 
@@ -97,14 +102,16 @@ backend/
 │   │   └── request_id.py          # X-Request-ID tracing middleware
 │   ├── schemas/
 │   │   ├── response.py            # HealthResponse & StandardErrorResponse schemas
-│   │   └── ai.py                  # Internal AI pipeline contracts (PersonInput, TryOnResult)
+│   │   └── ai.py                  # Internal AI pipeline contracts
 │   ├── services/ai/
 │   │   ├── pipeline.py            # VirtualWearPipeline orchestrator
 │   │   ├── exceptions.py          # AIPipelineError exception hierarchy
-│   │   ├── interfaces/            # Abstract base classes (BasePreprocessor, BaseTryOnEngine)
-│   │   └── mock/                  # Lightweight deterministic mock stage implementations
-│   ├── models/                    # Reserved for Phase 1.2+ database models
-│   └── utils/logger.py            # Centralized logger (timestamp | LOG_LEVEL | module | message)
+│   │   ├── interfaces/            # Abstract base classes
+│   │   ├── preprocessing/         # Real image preprocessor implementation (Pillow)
+│   │   │   ├── __init__.py
+│   │   │   └── image_preprocessor.py
+│   │   └── mock/                  # Mock stage implementations
+│   └── utils/logger.py            # Centralized logger
 ├── tests/
 │   ├── test_health.py             # Health endpoint tests
 │   ├── test_errors.py             # Error handler tests
@@ -112,7 +119,9 @@ backend/
 │   └── ai/
 │       ├── test_schemas.py        # Schema validation tests
 │       ├── test_interfaces.py     # Interface inheritance tests
-│       └── test_pipeline.py       # Pipeline E2E, stage ordering & concurrency tests
+│       ├── test_pipeline.py       # Pipeline E2E & concurrency tests
+│       ├── test_image_preprocessor.py # ImagePreprocessor unit tests
+│       └── test_pipeline_integration.py # Real preprocessor + pipeline integration tests
 ├── .env.example
 ├── pyproject.toml
 ├── README.md

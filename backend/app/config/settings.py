@@ -1,4 +1,3 @@
-import json
 from typing import List, Union
 
 from pydantic import Field, field_validator
@@ -6,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Centralized application settings loaded from environment variables."""
+    """Application configuration loaded from environment variables or defaults."""
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -15,70 +14,70 @@ class Settings(BaseSettings):
         case_sensitive=True,
     )
 
-    APP_NAME: str = Field(default="Virtual Wear Simulation API")
-    APP_VERSION: str = Field(default="1.0.0")
-    APP_ENV: str = Field(default="development")
-    DEBUG: bool = Field(default=True)
+    # General Application Configuration
+    APP_NAME: str = "Virtual Wear Simulation API"
+    APP_VERSION: str = "1.0.0"
+    APP_ENV: str = Field(
+        default="development", pattern="^(development|staging|production|test)$"
+    )
+    DEBUG: bool = True
+    API_V1_PREFIX: str = "/api/v1"
 
-    API_V1_PREFIX: str = Field(default="/api/v1")
+    # Server Configuration
+    HOST: str = "0.0.0.0"
+    PORT: int = Field(default=8000, ge=1, le=65535)
 
-    HOST: str = Field(default="0.0.0.0")
-    PORT: int = Field(default=8000)
+    # Security & CORS Settings
+    FRONTEND_URL: str = "http://localhost:5173"
+    CORS_ORIGINS: Union[List[str], str] = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
 
-    FRONTEND_URL: str = Field(default="http://localhost:5173")
-    CORS_ORIGINS: Union[List[str], str] = Field(
-        default=["http://localhost:5173", "http://127.0.0.1:5173"]
+    # Storage & Upload Limits
+    MAX_UPLOAD_SIZE_MB: int = Field(default=10, gt=0)
+    LOG_LEVEL: str = Field(
+        default="INFO",
+        pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$",
     )
 
-    MAX_UPLOAD_SIZE_MB: int = Field(default=10)
-    LOG_LEVEL: str = Field(default="INFO")
+    # AI Preprocessing Configuration (Phase 1.2.2)
+    AI_INPUT_MAX_FILE_SIZE_MB: float = Field(default=20.0, gt=0.0)
+    AI_INPUT_MAX_WIDTH: int = Field(default=8192, gt=0)
+    AI_INPUT_MAX_HEIGHT: int = Field(default=8192, gt=0)
 
-    @field_validator("PORT")
-    @classmethod
-    def validate_port(cls, v: int) -> int:
-        if not (1 <= v <= 65535):
-            raise ValueError("PORT must be between 1 and 65535")
-        return v
-
-    @field_validator("MAX_UPLOAD_SIZE_MB")
-    @classmethod
-    def validate_max_upload_size(cls, v: int) -> int:
-        if v <= 0:
-            raise ValueError("MAX_UPLOAD_SIZE_MB must be greater than 0")
-        return v
-
-    @field_validator("LOG_LEVEL")
-    @classmethod
-    def validate_log_level(cls, v: str) -> str:
-        valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-        upper_v = v.upper()
-        if upper_v not in valid_levels:
-            raise ValueError(f"LOG_LEVEL must be one of {valid_levels}")
-        return upper_v
-
-    @field_validator("API_V1_PREFIX")
-    @classmethod
-    def validate_api_prefix(cls, v: str) -> str:
-        if not v.startswith("/"):
-            raise ValueError("API_V1_PREFIX must start with '/'")
-        return v
+    AI_PREPROCESS_MAX_WIDTH: int = Field(default=1024, gt=0)
+    AI_PREPROCESS_MAX_HEIGHT: int = Field(default=1024, gt=0)
+    AI_PREPROCESS_OUTPUT_FORMAT: str = Field(default="JPEG")
+    AI_PREPROCESS_JPEG_QUALITY: int = Field(default=95, ge=1, le=100)
+    AI_PROCESSED_DIR: str = "data/processed"
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str):
-            v_trimmed = v.strip()
-            if v_trimmed.startswith("[") and v_trimmed.endswith("]"):
+    def parse_cors_origins(cls, value: Union[List[str], str]) -> List[str]:
+        """Ensures CORS_ORIGINS is always a parsed list of origin strings."""
+        if isinstance(value, str):
+            if value.startswith("[") and value.endswith("]"):
+                import json
+
                 try:
-                    parsed = json.loads(v_trimmed)
-                    if isinstance(parsed, list):
-                        return [str(item).strip() for item in parsed]
+                    return json.loads(value)
                 except json.JSONDecodeError:
                     pass
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        elif isinstance(v, list):
-            return [str(origin).strip() for origin in v]
-        return ["http://localhost:5173"]
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
+    @field_validator("AI_PREPROCESS_OUTPUT_FORMAT", mode="before")
+    @classmethod
+    def validate_output_format(cls, value: str) -> str:
+        """Ensures preprocessing output format is supported."""
+        formatted = value.upper().strip()
+        supported = ["JPEG", "PNG", "WEBP"]
+        if formatted not in supported:
+            raise ValueError(
+                f"Unsupported output format '{value}'. Supported formats: {supported}"
+            )
+        return formatted
 
 
 settings = Settings()
