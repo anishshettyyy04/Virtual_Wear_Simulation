@@ -7,8 +7,6 @@ class BasePoseEstimator(ABC):
     """Abstract interface defining body posture keypoint estimation stage."""
 
     @abstractmethod
-    async def estimate(
-        self, preprocessed: PreprocessingResult
-    ) -> PoseEstimationResult:
+    async def estimate(self, preprocessed: PreprocessingResult) -> PoseEstimationResult:
         """Extracts skeletal pose landmarks from preprocessed avatar input."""
         pass

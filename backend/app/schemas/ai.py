@@ -106,9 +106,7 @@ class RawTryOnOutput(BaseModel):
 class PostprocessingResult(BaseModel):
     """Contract emitted by final postprocessing stage."""
 
-    final_image_id: str = Field(
-        ..., json_schema_extra={"example": "final_tryon_001"}
-    )
+    final_image_id: str = Field(..., json_schema_extra={"example": "final_tryon_001"})
     output_ref: str = Field(
         ..., json_schema_extra={"example": "storage://results/tryon_001.jpg"}
     )

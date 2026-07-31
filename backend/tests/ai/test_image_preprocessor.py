@@ -220,9 +220,7 @@ async def test_malicious_identifier_containment(
     person = PersonInput(
         person_id="../../outside/malicious_user", image_ref=str(p_path)
     )
-    garment = GarmentInput(
-        garment_id="garment/../../../hacked", image_ref=str(g_path)
-    )
+    garment = GarmentInput(garment_id="garment/../../../hacked", image_ref=str(g_path))
 
     result = await preprocessor.process(person, garment)
 

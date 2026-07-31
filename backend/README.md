@@ -27,10 +27,11 @@ Person ──────┐
              │
 Garment ─────┘
              │
-      ┌──────┴──────┐
-      ▼             ▼
- Mock Parser    Mock Pose
-      └──────┬──────┘
+      ┌──────┴──────────────┐
+      ▼                     ▼
+ SegFormerParser       Mock Pose Estimator
+ (Real - Phase 1.2.3B)
+      └──────┬──────────────┘
              ▼
       Mock Try-On Engine
              │
@@ -43,7 +44,7 @@ Garment ─────┘
 
 ### Stage Implementation Status
 - **Preprocessing (`ImagePreprocessor`)**: **REAL** (Pillow-based validation, EXIF transpose, RGB normalization, `FIT_WITHIN` resizing, atomic output writes).
-- **Human Parsing (`BaseHumanParser`)**: **MOCK** (`MockHumanParser`).
+- **Human Parsing (`SegFormerHumanParser`)**: **REAL** (`mattmdjaga/segformer_b2_clothes` via PyTorch + Hugging Face Transformers, 18-class raw segmentation, `ProjectSemanticLabel` v1 mapping, 8-bit lossless PNG mask artifacts). `MockHumanParser` remains available for mock pipeline testing.
 - **Pose Estimation (`BasePoseEstimator`)**: **MOCK** (`MockPoseEstimator`).
 - **Virtual Try-On Engine (`BaseTryOnEngine`)**: **MOCK** (`MockTryOnEngine`).
 - **Postprocessing (`BasePostprocessor`)**: **MOCK** (`MockPostprocessor`).
@@ -61,6 +62,18 @@ Garment ─────┘
 
 ---
 
+## 👤 Real Human Parser Details (Phase 1.2.3B)
+
+### Features & Architecture
+1. **SegFormer Model (`mattmdjaga/segformer_b2_clothes`)**: Fine-tuned on clothing and human body datasets, generating 18 raw semantic classes.
+2. **Model-Independent Semantic Labels (`ProjectSemanticLabel`)**: Centralized `v1` IntEnum mapping raw class IDs to `BACKGROUND`, `HAIR`, `FACE`, `HEAD_ACCESSORY`, `UPPER_GARMENT`, `LOWER_GARMENT`, `FULL_BODY_GARMENT`, `LEFT_ARM`, `RIGHT_ARM`, `LEFT_LEG`, `RIGHT_LEG`, `FOOTWEAR`, and `OTHER`. Unknown classes default gracefully to `OTHER`.
+3. **Lossless Semantic Mask Artifacts**: Generated as 8-bit single-channel Grayscale PNG (`PNG`, mode `"L"`). Pixel values equal stable integer `ProjectSemanticLabel` values. Resizing strictly uses `NEAREST` neighbor interpolation.
+4. **Configurable Execution Device (`auto` / `cpu` / `cuda`)**: Automatically selects CUDA when hardware is available; forces CPU or validates CUDA availability based on setting `AI_HUMAN_PARSER_DEVICE`.
+5. **Non-Blocking Thread Offloading**: Synchronous PyTorch model inference is wrapped using `asyncio.to_thread(...)`, preserving non-blocking event loop execution during concurrent stage processing in `VirtualWearPipeline`.
+6. **Collision-Resistant & Atomic Artifact Writes**: Mask filenames use sanitized IDs + SHA-256 hashes (`mask_<safe_id>.png`) written via atomic temporary replacement.
+
+---
+
 ## ⚙️ Configuration Variables
 
 | Setting | Default | Description |
@@ -73,6 +86,11 @@ Garment ─────┘
 | `AI_PREPROCESS_OUTPUT_FORMAT` | `"JPEG"` | Preprocessed output image format (`JPEG`, `PNG`, `WEBP`) |
 | `AI_PREPROCESS_JPEG_QUALITY` | `95` | JPEG encoding quality (1–100) |
 | `AI_PROCESSED_DIR` | `"data/processed"` | Output directory for preprocessed image artifacts |
+| `AI_HUMAN_PARSER_MODEL` | `"mattmdjaga/segformer_b2_clothes"` | Hugging Face model repository ID or local model weights directory |
+| `AI_HUMAN_PARSER_DEVICE` | `"auto"` | Target execution device (`auto`, `cpu`, `cuda`) |
+| `AI_HUMAN_PARSER_OUTPUT_DIR` | `"data/processed/parsing"` | Output directory for single-channel PNG semantic mask artifacts |
+| `AI_HUMAN_PARSER_PRECISION` | `"fp32"` | Model inference numerical precision (`fp32`, `fp16`) |
+
 
 ---
 

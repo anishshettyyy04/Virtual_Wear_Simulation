@@ -28,3 +28,5 @@ minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+markers = ["smoke: mark test as smoke test"]
+

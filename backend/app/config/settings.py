@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     AI_PREPROCESS_JPEG_QUALITY: int = Field(default=95, ge=1, le=100)
     AI_PROCESSED_DIR: str = "data/processed"
 
+    # AI Human Parser Configuration (Phase 1.2.3B)
+    AI_HUMAN_PARSER_MODEL: str = "mattmdjaga/segformer_b2_clothes"
+    AI_HUMAN_PARSER_DEVICE: str = Field(default="auto", pattern="^(auto|cpu|cuda)$")
+    AI_HUMAN_PARSER_OUTPUT_DIR: str = "data/processed/parsing"
+    AI_HUMAN_PARSER_PRECISION: str = Field(default="fp32", pattern="^(fp32|fp16)$")
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: Union[List[str], str]) -> List[str]:

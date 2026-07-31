@@ -6,9 +6,7 @@ from app.utils.logger import logger
 class MockPoseEstimator(BasePoseEstimator):
     """Deterministic mock pose estimator implementation."""
 
-    async def estimate(
-        self, preprocessed: PreprocessingResult
-    ) -> PoseEstimationResult:
+    async def estimate(self, preprocessed: PreprocessingResult) -> PoseEstimationResult:
         logger.info(
             f"MockPoseEstimator: Estimating pose keypoints for person "
             f"'{preprocessed.person_processed_id}'"
