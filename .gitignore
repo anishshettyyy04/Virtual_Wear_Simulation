@@ -45,3 +45,8 @@ backend/data/
 *.pt
 *.safetensors
 
+# Agent instructions (Local only - do not push to GitHub)
+.agents/
+AGENTS.md
+
+
