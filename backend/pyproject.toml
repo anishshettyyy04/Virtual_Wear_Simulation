@@ -28,5 +28,9 @@ minversion = "8.0"
 testpaths = ["tests"]
 pythonpath = ["."]
 asyncio_mode = "auto"
-markers = ["smoke: mark test as smoke test"]
+markers = [
+    "smoke: mark test as human parser smoke test",
+    "pose_smoke: mark test as real DWPose smoke test",
+]
+
 

@@ -29,8 +29,8 @@ Garment ─────┘
              │
       ┌──────┴──────────────┐
       ▼                     ▼
- SegFormerParser       Mock Pose Estimator
- (Real - Phase 1.2.3B)
+ SegFormerParser       DWPoseEstimator
+ (Real - Phase 1.2.3B) (Real - Phase 1.2.4B)
       └──────┬──────────────┘
              ▼
       Mock Try-On Engine
@@ -45,7 +45,7 @@ Garment ─────┘
 ### Stage Implementation Status
 - **Preprocessing (`ImagePreprocessor`)**: **REAL** (Pillow-based validation, EXIF transpose, RGB normalization, `FIT_WITHIN` resizing, atomic output writes).
 - **Human Parsing (`SegFormerHumanParser`)**: **REAL** (`mattmdjaga/segformer_b2_clothes` via PyTorch + Hugging Face Transformers, 18-class raw segmentation, `ProjectSemanticLabel` v1 mapping, 8-bit lossless PNG mask artifacts). `MockHumanParser` remains available for mock pipeline testing.
-- **Pose Estimation (`BasePoseEstimator`)**: **MOCK** (`MockPoseEstimator`).
+- **Pose Estimation (`DWPoseEstimator`)**: **REAL** (YOLOX-l Person Detector + RTMPose-l DWPose via ONNX Runtime, 18-point OpenPose COCO-18 schema v1 mapping, derived `NECK` calculation, JSON pose artifacts). `MockPoseEstimator` remains available for mock pipeline testing.
 - **Virtual Try-On Engine (`BaseTryOnEngine`)**: **MOCK** (`MockTryOnEngine`).
 - **Postprocessing (`BasePostprocessor`)**: **MOCK** (`MockPostprocessor`).
 
@@ -74,6 +74,18 @@ Garment ─────┘
 
 ---
 
+## 🦴 Real Pose Estimator Details (Phase 1.2.4B)
+
+### Features & Architecture
+1. **Two-Stage ONNX Pipeline**: YOLOX-l Person Bounding Box Detector + RTMPose-l DWPose Estimator via ONNX Runtime (`onnxruntime`).
+2. **Project COCO-18 Topology (`v1`)**: Model-independent 18-landmark schema (`NOSE`, `NECK`, `RIGHT_SHOULDER`, `RIGHT_ELBOW`, `RIGHT_WRIST`, `LEFT_SHOULDER`, `LEFT_ELBOW`, `LEFT_WRIST`, `RIGHT_HIP`, `RIGHT_KNEE`, `RIGHT_ANKLE`, `LEFT_HIP`, `LEFT_KNEE`, `LEFT_ANKLE`, `RIGHT_EYE`, `LEFT_EYE`, `RIGHT_EAR`, `LEFT_EAR`).
+3. **Derived `NECK` Calculation**: Computed as the midpoint of `LEFT_SHOULDER` and `RIGHT_SHOULDER` when both shoulders meet confidence threshold ($\ge 0.3$). Marked `"derived": true`. If either shoulder is missing or low-confidence, `NECK` is marked missing with explicit `null` coordinates.
+4. **Unambiguous Missing Coordinates**: Missing landmarks use `x: null, y: null, x_px: null, y_px: null, confidence: 0.0, visible: false` instead of ambiguous `(0, 0)` coordinates.
+5. **Deterministic Primary Person Selection**: Selects largest person bounding box area ($\text{Width} \times \text{Height}$) with confidence $\ge 0.4$, tie-breaking by distance to image center.
+6. **Portable Pose Artifacts**: Saved as JSON documents under `data/processed/poses/pose_<safe_id>.json` and referenced via `PoseEstimationResult.pose_ref`.
+
+---
+
 ## ⚙️ Configuration Variables
 
 | Setting | Default | Description |
@@ -90,6 +102,13 @@ Garment ─────┘
 | `AI_HUMAN_PARSER_DEVICE` | `"auto"` | Target execution device (`auto`, `cpu`, `cuda`) |
 | `AI_HUMAN_PARSER_OUTPUT_DIR` | `"data/processed/parsing"` | Output directory for single-channel PNG semantic mask artifacts |
 | `AI_HUMAN_PARSER_PRECISION` | `"fp32"` | Model inference numerical precision (`fp32`, `fp16`) |
+| `AI_POSE_MODEL_DETECTOR` | `"data/models/pose/yolox_l.onnx"` | Path to YOLOX person detector ONNX model file |
+| `AI_POSE_MODEL_ESTIMATOR` | `"data/models/pose/dw-ll_ucoco_384.onnx"` | Path to DWPose pose estimator ONNX model file |
+| `AI_POSE_DEVICE` | `"auto"` | Target execution device for pose estimator (`auto`, `cpu`, `cuda`) |
+| `AI_POSE_CONFIDENCE_THRESHOLD` | `0.3` | Minimum confidence score to mark keypoint visible |
+| `AI_POSE_DETECTION_THRESHOLD` | `0.4` | Minimum bounding box score threshold for person detector |
+| `AI_POSE_OUTPUT_DIR` | `"data/processed/poses"` | Output directory for JSON pose artifacts |
+
 
 
 ---

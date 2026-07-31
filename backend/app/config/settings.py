@@ -58,6 +58,14 @@ class Settings(BaseSettings):
     AI_HUMAN_PARSER_OUTPUT_DIR: str = "data/processed/parsing"
     AI_HUMAN_PARSER_PRECISION: str = Field(default="fp32", pattern="^(fp32|fp16)$")
 
+    # AI Pose Estimator Configuration (Phase 1.2.4B)
+    AI_POSE_MODEL_DETECTOR: str = "data/models/pose/yolox_l.onnx"
+    AI_POSE_MODEL_ESTIMATOR: str = "data/models/pose/dw-ll_ucoco_384.onnx"
+    AI_POSE_DEVICE: str = Field(default="auto", pattern="^(auto|cpu|cuda)$")
+    AI_POSE_CONFIDENCE_THRESHOLD: float = Field(default=0.3, ge=0.0, le=1.0)
+    AI_POSE_DETECTION_THRESHOLD: float = Field(default=0.4, ge=0.0, le=1.0)
+    AI_POSE_OUTPUT_DIR: str = "data/processed/poses"
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: Union[List[str], str]) -> List[str]:

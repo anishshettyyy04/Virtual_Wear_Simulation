@@ -23,6 +23,25 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment
+# Environment & Virtualenvs
 .env
 .env.production
+.venv/
+venv/
+ENV/
+
+# Python Build & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+
+# Local Data & Model Weights
+data/
+backend/data/
+*.onnx
+*.pth
+*.pt
+*.safetensors
+

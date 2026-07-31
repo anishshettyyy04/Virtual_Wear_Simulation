@@ -14,5 +14,7 @@ torch>=2.0.0
 torchvision>=0.15.0
 transformers>=4.38.0
 safetensors>=0.4.0
+numpy>=1.26.0
+onnxruntime>=1.17.0
 
 
