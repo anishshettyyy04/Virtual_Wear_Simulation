@@ -1,4 +1,6 @@
 from app.schemas.ai import (
+    AgnosticMaskResult,
+    GarmentInput,
     HumanParsingResult,
     PoseEstimationResult,
     PreprocessingResult,
@@ -16,13 +18,15 @@ class MockTryOnEngine(BaseTryOnEngine):
         preprocessed: PreprocessingResult,
         parsing: HumanParsingResult,
         pose: PoseEstimationResult,
+        agnostic_mask: AgnosticMaskResult,
+        garment: GarmentInput,
     ) -> RawTryOnOutput:
         p_id = preprocessed.person_processed_id
         g_id = preprocessed.garment_processed_id
         logger.info(
             f"MockTryOnEngine: Generating VTON render for person '{p_id}' "
-            f"and garment '{g_id}' using mask '{parsing.mask_id}' "
-            f"and pose '{pose.pose_id}'"
+            f"and garment '{g_id}' using parsing '{parsing.mask_id}', "
+            f"pose '{pose.pose_id}', and agnostic mask '{agnostic_mask.mask_id}'"
         )
         return RawTryOnOutput(
             raw_render_id=f"raw_{p_id}_{g_id}",
@@ -34,5 +38,6 @@ class MockTryOnEngine(BaseTryOnEngine):
                 "steps": 30,
                 "sampler": "euler_a",
                 "garment_warped": True,
+                "agnostic_mask_id": agnostic_mask.mask_id,
             },
         )

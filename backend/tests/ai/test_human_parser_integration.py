@@ -6,6 +6,7 @@ from PIL import Image
 
 from app.config.settings import Settings
 from app.schemas.ai import GarmentInput, PersonInput, TryOnResult
+from app.services.ai.mock.agnostic_mask_generator import MockAgnosticMaskGenerator
 from app.services.ai.mock.human_parser import MockHumanParser
 from app.services.ai.mock.pose_estimator import MockPoseEstimator
 from app.services.ai.mock.postprocessor import MockPostprocessor
@@ -58,6 +59,7 @@ async def test_pipeline_with_segformer_parser(sample_input_images):
         preprocessor=preprocessor,
         human_parser=segformer_parser,
         pose_estimator=MockPoseEstimator(),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )
@@ -86,6 +88,7 @@ async def test_mock_human_parser_backward_compatibility(sample_input_images):
         preprocessor=ImagePreprocessor(config=custom_settings),
         human_parser=MockHumanParser(),
         pose_estimator=MockPoseEstimator(),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )
@@ -116,6 +119,7 @@ async def test_real_segformer_model_smoke_test(sample_input_images):
         preprocessor=preprocessor,
         human_parser=human_parser,
         pose_estimator=MockPoseEstimator(),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )

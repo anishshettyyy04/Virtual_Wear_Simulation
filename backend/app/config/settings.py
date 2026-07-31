@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     AI_POSE_DETECTION_THRESHOLD: float = Field(default=0.4, ge=0.0, le=1.0)
     AI_POSE_OUTPUT_DIR: str = "data/processed/poses"
 
+    # AI Agnostic Mask Generator Configuration (Phase 1.2.5B)
+    AI_AGNOSTIC_MASK_OUTPUT_DIR: str = "data/processed/agnostic_masks"
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: Union[List[str], str]) -> List[str]:

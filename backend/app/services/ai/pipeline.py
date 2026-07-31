@@ -3,11 +3,15 @@ from typing import Any, Dict
 
 from app.schemas.ai import GarmentInput, PersonInput, TryOnResult
 from app.services.ai.exceptions import (
+    AgnosticMaskError,
     AIPipelineError,
     HumanParsingError,
     PostprocessingError,
     PreprocessingError,
     TryOnInferenceError,
+)
+from app.services.ai.interfaces.agnostic_mask_generator import (
+    BaseAgnosticMaskGenerator,
 )
 from app.services.ai.interfaces.human_parser import BaseHumanParser
 from app.services.ai.interfaces.pose_estimator import BasePoseEstimator
@@ -25,12 +29,14 @@ class VirtualWearPipeline:
         preprocessor: BasePreprocessor,
         human_parser: BaseHumanParser,
         pose_estimator: BasePoseEstimator,
+        agnostic_mask_generator: BaseAgnosticMaskGenerator,
         tryon_engine: BaseTryOnEngine,
         postprocessor: BasePostprocessor,
     ) -> None:
         self.preprocessor = preprocessor
         self.human_parser = human_parser
         self.pose_estimator = pose_estimator
+        self.agnostic_mask_generator = agnostic_mask_generator
         self.tryon_engine = tryon_engine
         self.postprocessor = postprocessor
 
@@ -75,11 +81,25 @@ class VirtualWearPipeline:
             "Pose Estimation completed"
         )
 
-        # Stage 3: Virtual Try-On Neural Inference Engine
-        logger.info("AI Pipeline: Stage 3 - Virtual Try-On Engine inference started")
+        # Stage 3: Agnostic Mask Generation
+        logger.info("AI Pipeline: Stage 3 - Agnostic Mask Generation started")
+        try:
+            agnostic_mask = await self.agnostic_mask_generator.generate(
+                preprocessed, parsing_result, pose_result, garment
+            )
+        except AIPipelineError:
+            raise
+        except Exception as exc:
+            raise AgnosticMaskError(
+                f"Agnostic Mask Generation stage failed: {exc}", details=str(exc)
+            ) from exc
+        logger.info("AI Pipeline: Stage 3 - Agnostic Mask Generation completed")
+
+        # Stage 4: Virtual Try-On Neural Inference Engine
+        logger.info("AI Pipeline: Stage 4 - Virtual Try-On Engine inference started")
         try:
             raw_output = await self.tryon_engine.generate(
-                preprocessed, parsing_result, pose_result
+                preprocessed, parsing_result, pose_result, agnostic_mask, garment
             )
         except AIPipelineError:
             raise
@@ -87,10 +107,10 @@ class VirtualWearPipeline:
             raise TryOnInferenceError(
                 f"Try-On Engine inference stage failed: {exc}", details=str(exc)
             ) from exc
-        logger.info("AI Pipeline: Stage 3 - Virtual Try-On Engine inference completed")
+        logger.info("AI Pipeline: Stage 4 - Virtual Try-On Engine inference completed")
 
-        # Stage 4: Postprocessing & Final Render Encoding
-        logger.info("AI Pipeline: Stage 4 - Postprocessing started")
+        # Stage 5: Postprocessing & Final Render Encoding
+        logger.info("AI Pipeline: Stage 5 - Postprocessing started")
         try:
             final_result = await self.postprocessor.process(raw_output)
         except AIPipelineError:
@@ -99,7 +119,7 @@ class VirtualWearPipeline:
             raise PostprocessingError(
                 f"Postprocessing stage failed: {exc}", details=str(exc)
             ) from exc
-        logger.info("AI Pipeline: Stage 4 - Postprocessing completed")
+        logger.info("AI Pipeline: Stage 5 - Postprocessing completed")
 
         pipeline_metadata: Dict[str, Any] = {
             "model_name": raw_output.model_name,
@@ -107,6 +127,8 @@ class VirtualWearPipeline:
             "confidence_score": raw_output.confidence_score,
             "num_keypoints": pose_result.num_keypoints,
             "segment_categories": parsing_result.segment_categories,
+            "agnostic_mask_id": agnostic_mask.mask_id,
+            "replace_coverage": agnostic_mask.replace_coverage,
         }
 
         logger.info("AI Pipeline: Execution completed successfully")

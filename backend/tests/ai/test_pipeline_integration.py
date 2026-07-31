@@ -5,6 +5,7 @@ from PIL import Image
 
 from app.config.settings import Settings
 from app.schemas.ai import GarmentInput, PersonInput, TryOnResult
+from app.services.ai.mock.agnostic_mask_generator import MockAgnosticMaskGenerator
 from app.services.ai.mock.human_parser import MockHumanParser
 from app.services.ai.mock.pose_estimator import MockPoseEstimator
 from app.services.ai.mock.postprocessor import MockPostprocessor
@@ -39,6 +40,7 @@ async def test_pipeline_integration_real_preprocessor(tmp_path: Path) -> None:
         preprocessor=real_preprocessor,
         human_parser=MockHumanParser(),
         pose_estimator=MockPoseEstimator(),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )

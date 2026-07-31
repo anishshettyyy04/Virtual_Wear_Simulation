@@ -31,6 +31,13 @@ class PoseEstimationError(AIPipelineError):
         super().__init__(message, stage="pose_estimation", details=details)
 
 
+class AgnosticMaskError(AIPipelineError):
+    """Exception raised during clothing-agnostic mask generation stage."""
+
+    def __init__(self, message: str, details: str | None = None) -> None:
+        super().__init__(message, stage="agnostic_mask", details=details)
+
+
 class TryOnInferenceError(AIPipelineError):
     """Exception raised during virtual try-on neural engine stage."""
 

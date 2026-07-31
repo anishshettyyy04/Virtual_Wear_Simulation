@@ -31,6 +31,8 @@ asyncio_mode = "auto"
 markers = [
     "smoke: mark test as human parser smoke test",
     "pose_smoke: mark test as real DWPose smoke test",
+    "mask_smoke: mark test as real agnostic mask generator smoke test",
 ]
+
 
 

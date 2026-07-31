@@ -5,17 +5,22 @@ import pytest
 
 from app.schemas.ai import GarmentInput, ImageDimensions, PersonInput, TryOnResult
 from app.services.ai.exceptions import (
+    AgnosticMaskError,
     HumanParsingError,
     PoseEstimationError,
     PostprocessingError,
     PreprocessingError,
     TryOnInferenceError,
 )
+from app.services.ai.interfaces.agnostic_mask_generator import (
+    BaseAgnosticMaskGenerator,
+)
 from app.services.ai.interfaces.human_parser import BaseHumanParser
 from app.services.ai.interfaces.pose_estimator import BasePoseEstimator
 from app.services.ai.interfaces.postprocessor import BasePostprocessor
 from app.services.ai.interfaces.preprocessor import BasePreprocessor
 from app.services.ai.interfaces.tryon_engine import BaseTryOnEngine
+from app.services.ai.mock.agnostic_mask_generator import MockAgnosticMaskGenerator
 from app.services.ai.mock.human_parser import MockHumanParser
 from app.services.ai.mock.pose_estimator import MockPoseEstimator
 from app.services.ai.mock.postprocessor import MockPostprocessor
@@ -31,6 +36,7 @@ async def test_full_mock_pipeline_execution() -> None:
         preprocessor=MockPreprocessor(),
         human_parser=MockHumanParser(),
         pose_estimator=MockPoseEstimator(),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )
@@ -76,10 +82,19 @@ async def test_pipeline_stage_ordering_spy() -> None:
             execution_order.append("pose_estimator")
             return await MockPoseEstimator().estimate(preprocessed)
 
+    class SpyAgnosticMaskGenerator(BaseAgnosticMaskGenerator):
+        async def generate(self, preprocessed, parsing, pose, garment):
+            execution_order.append("agnostic_mask_generator")
+            return await MockAgnosticMaskGenerator().generate(
+                preprocessed, parsing, pose, garment
+            )
+
     class SpyTryOnEngine(BaseTryOnEngine):
-        async def generate(self, preprocessed, parsing, pose):
+        async def generate(self, preprocessed, parsing, pose, agnostic_mask, garment):
             execution_order.append("tryon_engine")
-            return await MockTryOnEngine().generate(preprocessed, parsing, pose)
+            return await MockTryOnEngine().generate(
+                preprocessed, parsing, pose, agnostic_mask, garment
+            )
 
     class SpyPostprocessor(BasePostprocessor):
         async def process(self, raw_output):
@@ -90,6 +105,7 @@ async def test_pipeline_stage_ordering_spy() -> None:
         preprocessor=SpyPreprocessor(),
         human_parser=SpyHumanParser(),
         pose_estimator=SpyPoseEstimator(),
+        agnostic_mask_generator=SpyAgnosticMaskGenerator(),
         tryon_engine=SpyTryOnEngine(),
         postprocessor=SpyPostprocessor(),
     )
@@ -101,8 +117,9 @@ async def test_pipeline_stage_ordering_spy() -> None:
 
     assert execution_order[0] == "preprocessor"
     assert set(execution_order[1:3]) == {"human_parser", "pose_estimator"}
-    assert execution_order[3] == "tryon_engine"
-    assert execution_order[4] == "postprocessor"
+    assert execution_order[3] == "agnostic_mask_generator"
+    assert execution_order[4] == "tryon_engine"
+    assert execution_order[5] == "postprocessor"
 
 
 @pytest.mark.asyncio
@@ -127,6 +144,7 @@ async def test_concurrent_parsing_and_pose_execution() -> None:
         preprocessor=MockPreprocessor(),
         human_parser=ConcurrentHumanParser(),
         pose_estimator=ConcurrentPoseEstimator(),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )
@@ -145,6 +163,7 @@ async def test_concurrent_parsing_and_pose_execution() -> None:
         ("preprocessor", PreprocessingError),
         ("human_parser", HumanParsingError),
         ("pose_estimator", PoseEstimationError),
+        ("agnostic_mask_generator", AgnosticMaskError),
         ("tryon_engine", TryOnInferenceError),
         ("postprocessor", PostprocessingError),
     ],
@@ -172,11 +191,19 @@ async def test_pipeline_stage_failure_propagation(
                 raise PoseEstimationError("Custom pose exception")
             return await super().estimate(preprocessed)
 
+    class FailingAgnosticMaskGenerator(MockAgnosticMaskGenerator):
+        async def generate(self, preprocessed, parsing, pose, garment):
+            if failing_stage == "agnostic_mask_generator":
+                raise AgnosticMaskError("Custom mask exception")
+            return await super().generate(preprocessed, parsing, pose, garment)
+
     class FailingTryOnEngine(MockTryOnEngine):
-        async def generate(self, preprocessed, parsing, pose):
+        async def generate(self, preprocessed, parsing, pose, agnostic_mask, garment):
             if failing_stage == "tryon_engine":
                 raise RuntimeError("Custom VTON engine failure")
-            return await super().generate(preprocessed, parsing, pose)
+            return await super().generate(
+                preprocessed, parsing, pose, agnostic_mask, garment
+            )
 
     class FailingPostprocessor(MockPostprocessor):
         async def process(self, raw_output):
@@ -188,6 +215,7 @@ async def test_pipeline_stage_failure_propagation(
         preprocessor=FailingPreprocessor(),
         human_parser=FailingHumanParser(),
         pose_estimator=FailingPoseEstimator(),
+        agnostic_mask_generator=FailingAgnosticMaskGenerator(),
         tryon_engine=FailingTryOnEngine(),
         postprocessor=FailingPostprocessor(),
     )

@@ -6,6 +6,7 @@ from PIL import Image
 
 from app.config.settings import Settings
 from app.schemas.ai import GarmentInput, PersonInput, TryOnResult
+from app.services.ai.mock.agnostic_mask_generator import MockAgnosticMaskGenerator
 from app.services.ai.mock.pose_estimator import MockPoseEstimator
 from app.services.ai.mock.postprocessor import MockPostprocessor
 from app.services.ai.mock.tryon_engine import MockTryOnEngine
@@ -69,6 +70,7 @@ async def test_pipeline_integration_with_dwpose_estimator(
         preprocessor=preprocessor,
         human_parser=human_parser,
         pose_estimator=pose_estimator,
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=tryon_engine,
         postprocessor=postprocessor,
     )
@@ -103,6 +105,7 @@ async def test_mock_pose_estimator_backward_compatibility(
             model=FakeSegFormerModel(),
         ),
         pose_estimator=MockPoseEstimator(),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )
@@ -145,6 +148,7 @@ async def test_real_dwpose_model_smoke_test(sample_input_images, tmp_path: Path)
             detection_threshold=0.00001,
             output_dir=str(tmp_path / "processed" / "poses"),
         ),
+        agnostic_mask_generator=MockAgnosticMaskGenerator(),
         tryon_engine=MockTryOnEngine(),
         postprocessor=MockPostprocessor(),
     )

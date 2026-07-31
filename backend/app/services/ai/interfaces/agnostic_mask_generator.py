@@ -6,12 +6,11 @@ from app.schemas.ai import (
     HumanParsingResult,
     PoseEstimationResult,
     PreprocessingResult,
-    RawTryOnOutput,
 )
 
 
-class BaseTryOnEngine(ABC):
-    """Model-agnostic abstract interface defining virtual try-on neural engine stage."""
+class BaseAgnosticMaskGenerator(ABC):
+    """Abstract interface defining clothing-agnostic mask generation stage."""
 
     @abstractmethod
     async def generate(
@@ -19,8 +18,7 @@ class BaseTryOnEngine(ABC):
         preprocessed: PreprocessingResult,
         parsing: HumanParsingResult,
         pose: PoseEstimationResult,
-        agnostic_mask: AgnosticMaskResult,
         garment: GarmentInput,
-    ) -> RawTryOnOutput:
-        """Executes virtual try-on inference combining person, garment, and pose."""
+    ) -> AgnosticMaskResult:
+        """Asynchronously generates binary clothing-agnostic mask for VTON."""
         pass

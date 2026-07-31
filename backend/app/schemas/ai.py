@@ -1,4 +1,5 @@
-from typing import Any, List, Optional
+from enum import Enum
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -21,17 +22,48 @@ class PersonInput(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class GarmentInput(BaseModel):
-    """Internal contract for apparel garment input image resource."""
+class GarmentCategory(str, Enum):
+    """Canonical target clothing categories for agnostic mask generation."""
 
-    garment_id: str = Field(..., json_schema_extra={"example": "garment_001"})
+    UPPER_BODY = "upper_body"
+    LOWER_BODY = "lower_body"
+    FULL_BODY = "full_body"
+
+
+class GarmentInput(BaseModel):
+    """Garment image payload and metadata provided by client."""
+
+    garment_id: str = Field(..., json_schema_extra={"example": "garment_shirt_001"})
     image_ref: str = Field(
         ..., json_schema_extra={"example": "storage://garments/shirt_001.jpg"}
     )
-    category: str = Field(
+    category: Union[GarmentCategory, str] = Field(
+        default=GarmentCategory.UPPER_BODY,
+        json_schema_extra={"example": "upper_body"},
+    )
+    dimensions: Optional[ImageDimensions] = Field(default=None)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class AgnosticMaskResult(BaseModel):
+    """Contract emitted by clothing-agnostic mask generation stage."""
+
+    mask_id: str = Field(
+        ..., json_schema_extra={"example": "agnostic_mask_proc_person_001"}
+    )
+    mask_ref: str = Field(
+        ...,
+        json_schema_extra={
+            "example": "data/processed/agnostic_masks/mask_proc_person_001.png"
+        },
+    )
+    garment_category: str = Field(
         default="upper_body", json_schema_extra={"example": "upper_body"}
     )
     dimensions: Optional[ImageDimensions] = Field(default=None)
+    replace_coverage: float = Field(
+        default=0.0, ge=0.0, le=1.0, json_schema_extra={"example": 0.25}
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
