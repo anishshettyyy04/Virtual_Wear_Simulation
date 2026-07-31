@@ -1,325 +1,150 @@
-# Phase 1.2.5A: Agnostic Mask Research & Architecture
+# Phase 1.2.5A: Agnostic Mask Research & Architecture (Verified)
 
 **Project:** Virtual Wear Simulation — Backend  
 **Phase:** 1.2.5A — Agnostic Mask Research & Architecture  
-**Status:** Completed (Research & Architecture Planning Only)  
+**Status:** Completed & Verified  
 **Author:** AI Engineering & Architecture Team  
 
 ---
 
 ## Executive Summary
 
-This document presents the research, comparative VTON analysis, mask semantics specification, identity preservation rules, pose-parsing fusion strategy, and technical architecture for the **BaseAgnosticMaskGenerator** stage in the Virtual Wear Simulation backend pipeline.
+This document presents the verified technical research, resolution-scaling morphology, arm/sleeve replacement strategy, identity protection rules, and model-agnostic architecture for the **BaseAgnosticMaskGenerator** stage in the Virtual Wear Simulation backend.
 
-An **agnostic mask** is a single-channel binary image that isolates the garment replacement region (target clothing area to be inpainted by the VTON engine) while strictly preserving identity-sensitive regions (face, hair, skin, non-target clothing, hands, and background).
+Following deep inspection of official **IDM-VTON** (CVPR 2024), **CatVTON**, **OOTDiffusion**, and **StableVITON** preprocessing implementations:
 
-Following thorough analysis of open-source VTON models (**IDM-VTON**, **CatVTON**, **OOTDiffusion**, **StableVITON**), existing human parsing masks (`ProjectSemanticLabel` v1), and skeletal pose landmarks (`ProjectPose` COCO-18 v1):
-
-*   **Recommended Target VTON Engine:** **IDM-VTON** (Rank #1 Target) with **CatVTON** as Rank #2 Fallback.
+*   **DensePose Requirement:**
+    *   Mask Generation: **NOT REQUIRED** (Agnostic mask generation relies 100% on 2D human parsing + 2D skeletal pose keypoints).
+    *   IDM-VTON Inference: **REQUIRED FOR FULL PIPELINE** (IDM-VTON uses DensePose surface IUV maps in its conditioning branch alongside `openpose_img` and `agnostic_mask`, which will be integrated in Phase 1.2.6).
 *   **Canonical Mask Semantics:** 8-bit single-channel Grayscale PNG (`mode="L"`). `255` = **REPLACE** (Inpainting region), `0` = **PRESERVE** (Identity & non-target area).
-*   **Dependencies:** Uses existing **Pillow** + **NumPy** dependencies (zero OpenCV or heavy C++ additions required).
-*   **DensePose Decision:** **NOT REQUIRED BEFORE MASK GENERATION**. Agnostic mask generation relies 100% on 2D human parsing + 2D skeletal pose keypoints.
+*   **Resolution-Scaled Morphology:** Dilation and arm-vector protection widths scale dynamically relative to image resolution ($\text{scale} = \min(W,H)/1024$) with odd integer kernel bounds.
+*   **Arm / Sleeve Replacement Strategy:** Upper arms and elbows are included in the garment replacement zone for upper-body try-on to allow VTON models to render short, long, or sleeveless garments without sleeve boundary artifacts, while wrists and hands are strictly preserved.
+*   **Verification Status:** **GO for Phase 1.2.5B**
 
 ---
 
-## 1. Current Backend Pipeline State
+## 1. IDM-VTON Official Preprocessing vs. Project Architecture
 
-The backend operates on a modular, model-agnostic AI pipeline:
+The official IDM-VTON repository (`yakyoma/IDM-VTON`) generates clothing-agnostic masks by combining:
+1.  **Human Parsing:** Segmenting upper clothing, lower clothing, dresses, and background.
+2.  **OpenPose Keypoints:** Using neck, shoulder, elbow, and wrist keypoints to define upper-body boundaries and preserve hands.
+3.  **DensePose IUV Maps:** Generated as a separate conditioning image (`densepose_img`) for UNet surface alignment.
 
-```text
-Phase 1.1: FastAPI Backend Foundation         [✅ Completed]
-Phase 1.2.1: Model-Agnostic AI Pipeline      [✅ Completed]
-Phase 1.2.2: Real ImagePreprocessor (Pillow)  [✅ Completed]
-Phase 1.2.3A/B: Real Human Parser (SegFormer) [✅ Completed]
-Phase 1.2.4A/B: Real Pose Estimator (DWPose)   [✅ Completed]
-Phase 1.2.5A: Agnostic Mask Research          [✅ Current Phase]
-```
-
-### Next Execution Flow (Phase 1.2.5B)
+### Project Adapter Flow
 
 ```text
-Person + Garment
-       ↓
-Real ImagePreprocessor (Phase 1.2.2)
-       │
-       ├────────────────────────────────┐
-       ▼                                ▼
-Real SegFormer Parser              Real DWPose Estimator
-(Phase 1.2.3B)                     (Phase 1.2.4B)
-       │                                │
-       └────────────────┬───────────────┘
-                        ▼
-            Real AgnosticMaskGenerator
-            (Phase 1.2.5B Implementation)
-                        ↓
-               Mock Try-On Engine
-                        ↓
-              Mock Postprocessor
-                        ↓
-                   TryOnResult
+ProjectSemanticLabel v1 (SegFormer)
+           +
+ProjectPose COCO-18 v1 (DWPose)
+           ↓
+AgnosticMaskGenerator (Phase 1.2.5B)
+           ↓
+Canonical Agnostic Mask (0 = Preserve, 255 = Replace)
+           ↓
+IDM-VTON Adapter (Model-Specific Format Conversion in Phase 1.2.6)
 ```
 
 ---
 
-## 2. VTON Mask Requirements Analysis
+## 2. DensePose Requirement Analysis
 
-We investigated the official preprocessing expectations of major open-source VTON models:
-
-| Requirement | IDM-VTON | CatVTON | OOTDiffusion | StableVITON |
-| :--- | :--- | :--- | :--- | :--- |
-| **Mask Required?** | **Mandatory** | **Mandatory** | **Mandatory** | **Mandatory** |
-| **Mask Semantics** | `255` = Replace, `0` = Keep | `255` = Replace, `0` = Keep | `255` = Replace, `0` = Keep | `255` = Replace, `0` = Keep |
-| **Format & Mode** | Single-channel 8-bit PNG (`L`) | Single-channel 8-bit PNG (`L`) | Single-channel 8-bit PNG (`L`) | Single-channel 8-bit PNG (`L`) |
-| **Parsing Dependency** | `UPPER`/`LOWER` garment | `UPPER`/`LOWER` garment | `UPPER`/`LOWER`/`DRESS` | `UPPER`/`LOWER` garment |
-| **Pose Synergy** | OpenPose/DWPose arm protection | OpenPose/DWPose arm protection | OpenPose 18-point COCO | OpenPose + DensePose |
-| **Morphology** | Dilation (15–20 px) | Dilation (12–16 px) | Dilation (16–20 px) | Dilation (15–25 px) |
-| **DensePose in Mask?**| **No (Mask is 2D)** | **No** | **No** | **No (DensePose is separate)** |
-
-### Key Findings
-1.  **Universal Mask Semantics:** All major open-source VTON models expect an 8-bit single-channel binary mask image where **White (`255`)** indicates the region to be inpainted/replaced by target clothing, and **Black (`0`)** indicates the preserved person identity/background.
-2.  **Parsing + Pose Synergy:** All models construct agnostic masks by combining human parsing segmentations with skeletal pose arm/shoulder line vectors to protect arms, wrists, and hands from accidental erasure.
-3.  **DensePose Separation:** DensePose (3D surface mapping) is used by models like IDM-VTON and StableVITON during latent UNet conditioning, but is **never embedded inside the binary agnostic mask image itself**.
+| Stage / Component | DensePose Requirement | Justification |
+| :--- | :--- | :--- |
+| **Agnostic Mask Generation** | **NOT REQUIRED** | Agnostic mask generation is a 2D spatial segmentation process relying exclusively on 2D human parsing + 2D skeletal pose landmarks. |
+| **IDM-VTON Inference** | **REQUIRED FOR FULL PIPELINE** | IDM-VTON uses DensePose IUV maps (`densepose_img`) in its conditioning branch alongside `openpose_img` and `agnostic_mask`. |
 
 ---
 
-## 3. Recommended Target VTON Architecture
+## 3. Resolution-Dependent Morphology Scaling
 
-Based on pipeline compatibility, open-source adoption, output visual quality, and identity preservation:
+Static pixel counts (e.g. hardcoded 16px dilation) create inconsistent mask boundaries across varying image resolutions (e.g., 512x512 vs 2048x2048).
 
-### Ranked Recommendation
+### Dynamic Scaling Formula
+Using reference dimension $S_{\text{ref}} = 1024$:
 
-1.  **IDM-VTON (Rank #1 — Primary Target)**
-    *   **Why:** State-of-the-art try-on fidelity (CVPR 2024), superior garment texture/pattern warping, and direct native compatibility with our SegFormer 18-class parser and DWPose COCO-18 pose estimator.
-2.  **CatVTON (Rank #2 — Secondary / Lightweight Target)**
-    *   **Why:** Ultra-fast concatenation-based diffusion inpainting with low VRAM footprint (~8GB), using identical binary agnostic mask conventions.
-3.  **OOTDiffusion (Rank #3)**
-    *   **Why:** Robust multi-category support (`upper_body`, `lower_body`, `dress`), clean ONNX/PyTorch support.
-4.  **StableVITON (Rank #4)**
-    *   **Why:** High quality, but introduces mandatory DensePose preprocessing dependencies alongside skeletal pose and parsing.
+$$\text{scale} = \frac{\min(\text{width}, \text{height})}{1024.0}$$
 
-Phase 1.2.5B will design and optimize `AgnosticMaskGenerator` specifically for **IDM-VTON / CatVTON** mask conventions.
+$$\text{dilation\_px} = \text{clamp}\left(\text{round}(16 \times \text{scale}), \text{min}=4, \text{max}=48\right)$$
+
+$$\text{arm\_width\_px} = \text{clamp}\left(\text{round}(30 \times \text{scale}), \text{min}=10, \text{max}=90\right)$$
+
+$$\text{kernel\_size} = 2 \times \text{dilation\_px} + 1 \quad (\text{Guaranteed odd integer for PIL MaxFilter})$$
 
 ---
 
-## 4. Canonical Agnostic Mask Semantics
+## 4. Nuanced Arm & Sleeve Replacement Strategy
 
-We freeze the canonical mask format for the Virtual Wear backend:
+Unconditionally preserving the entire arm for upper-body try-on causes severe visual defects (e.g., trying on a short-sleeved t-shirt leaves original long sleeves intact).
 
-```text
-Format:          PNG
-Color Mode:      Single-channel 8-bit Grayscale (PIL mode "L")
-Dimensions:      Identical to preprocessed person image (e.g., 1024x1024)
-Interpolation:   NEAREST (when resizing or saving)
+### Sleeve & Arm Region Policy
 
-Pixel Values:
-  255 (0xFF / White) -> REPLACE (Target garment try-on inpainting region)
-    0 (0x00 / Black) -> PRESERVE (Identity, skin, hair, face, non-target garments, background)
-```
+1.  **Hands & Wrists (ALWAYS PRESERVED):** Keypoint regions for `RIGHT_WRIST` (ID 4) and `LEFT_WRIST` (ID 7) plus distal hand areas are **always forced to `0` (Preserve)**.
+2.  **Upper Arm & Elbow (REPLACE ZONE FOR UPPER_BODY):** Upper arms (`LEFT_ARM`, `RIGHT_ARM`) that overlap upper garment replacement regions are included in the replacement mask (`255`), allowing IDM-VTON's attention mechanism to render short, long, or sleeveless garments cleanly.
+3.  **Forearm Buffer:** A pose-guided line vector from elbow to wrist is rendered with a protected skin buffer ($\text{arm\_width\_px}$) to preserve skin below the sleeve hem.
 
 ---
 
-## 5. Canonical Garment Categories
+## 5. Face, Hair & Neck Boundary Strategy
 
-We define a stable enum/string classification for target try-on garments:
+SegFormer does not expose a separate `NECK` semantic class. To prevent mask dilation around collars from encroaching into the chin or neck:
+
+1.  **Face & Hair Shield:** `FACE` (label 2) and `HAIR` (label 1) masks are extracted and dilated by a 4px protective safety boundary.
+2.  **Neck Boundary Anchor:** Derived `NECK` keypoint (ID 1) provides the lower boundary anchor.
+3.  **Subtraction:** The expanded Face/Hair shield is subtracted from the try-on replacement mask **after** morphological dilation.
+
+---
+
+## 6. Coverage Validation by Garment Category
+
+Mask replace area coverage ($\% \text{ of total image area}$) is validated against category-specific bounds:
+
+| Garment Category | Min Coverage | Max Coverage | Failure / Warning Policy |
+| :--- | :---: | :---: | :--- |
+| `UPPER_BODY` | $10\%$ | $45\%$ | Warning in metadata if out-of-bounds |
+| `LOWER_BODY` | $15\%$ | $50\%$ | Warning in metadata if out-of-bounds |
+| `FULL_BODY` | $25\%$ | $75\%$ | Warning in metadata if out-of-bounds |
+
+---
+
+## 7. Canonical vs. Model-Specific Mask Semantics
+
+*   **Canonical Internal Mask:** `0` = PRESERVE, `255` = REPLACE (8-bit single-channel PNG, mode `"L"`).
+*   **Model Adapters:** Downstream VTON model adapters (e.g. `IDM-VTON Adapter`) convert the canonical mask to target tensor shapes, polarities, or normalization as required during inference.
+
+---
+
+## 8. Canonical GarmentCategory Enum
 
 ```python
 class GarmentCategory(str, Enum):
-    UPPER_BODY = "upper_body"  # T-shirts, shirts, tops, jackets, hoodies, sweaters
-    LOWER_BODY = "lower_body"  # Pants, jeans, shorts, skirts, trousers
-    FULL_BODY = "full_body"    # Dresses, jumpsuits, overalls, full suits
+    UPPER_BODY = "upper_body"
+    LOWER_BODY = "lower_body"
+    FULL_BODY = "full_body"
 ```
 
-User inputs (`GarmentInput.category`) will be validated against `GarmentCategory`. Category mappings (e.g. `"tops" -> UPPER_BODY`, `"pants" -> LOWER_BODY`) will be handled centrally.
+Incoming user string categories (e.g., `"tops"`, `"shirts"`, `"pants"`, `"dresses"`) are normalized to `GarmentCategory` via a central mapper.
 
 ---
 
-## 6. Mask Generation Strategy by Category
+## 9. Degradation & Error Handling Policies
 
-### A. Upper-Body Try-On (`UPPER_BODY`)
-
-```text
-Step 1: Extract Initial Replace Region
-        Replace = SegFormer(UPPER_GARMENT) ∪ SegFormer(FULL_BODY_GARMENT)
-
-Step 2: Morphological Dilation
-        Replace = Dilation(Replace, radius = 16px)  # Absorbs collar/sleeve seam errors
-
-Step 3: Pose-Guided Arm Protection
-        Protect_Arms = RasterizeLineVectors(
-            [L_Shoulder -> L_Elbow -> L_Wrist],
-            [R_Shoulder -> R_Elbow -> R_Wrist],
-            width = 30px
-        )
-
-Step 4: Subtract Protected Regions
-        Final_Mask = Replace \ (FACE ∪ HAIR ∪ HEAD_ACC ∪ LOWER_GARMENT ∪ LEGS ∪ FOOTWEAR ∪ Protect_Arms ∪ BACKGROUND)
-```
-
-### B. Lower-Body Try-On (`LOWER_BODY`)
-
-```text
-Step 1: Extract Initial Replace Region
-        Replace = SegFormer(LOWER_GARMENT) ∪ SegFormer(FULL_BODY_GARMENT)
-
-Step 2: Morphological Dilation
-        Replace = Dilation(Replace, radius = 16px)
-
-Step 3: Pose-Guided Leg & Waist Refinement
-        Protect_Upper = UPPER_GARMENT ∪ Protect_Arms ∪ FACE ∪ HAIR
-
-Step 4: Subtract Protected Regions
-        Final_Mask = Replace \ (Protect_Upper ∪ FOOTWEAR ∪ BACKGROUND)
-```
-
-### C. Full-Body Try-On (`FULL_BODY`)
-
-```text
-Step 1: Extract Initial Replace Region
-        Replace = SegFormer(UPPER_GARMENT) ∪ SegFormer(LOWER_GARMENT) ∪ SegFormer(FULL_BODY_GARMENT)
-
-Step 2: Morphological Dilation
-        Replace = Dilation(Replace, radius = 20px)
-
-Step 3: Subtract Protected Regions
-        Final_Mask = Replace \ (FACE ∪ HAIR ∪ HEAD_ACC ∪ FOOTWEAR ∪ Protect_Arms ∪ BACKGROUND)
-```
+| Condition | Action | Metadata / Log Output |
+| :--- | :--- | :--- |
+| **Missing Target Garment Mask** | **Degrade Gracefully** (Construct bounding torso polygon from pose shoulders/hips) | `"parsing_degraded": true` |
+| **Missing Arm / Wrist Keypoints** | **Degrade Gracefully** (Use parsing mask alone with default dilation) | `"pose_degraded": true` |
+| **Missing / Corrupted File** | **FAIL HARD** (Raise `AgnosticMaskError`) | `AgnosticMaskError` |
+| **Zero Replace Pixels** | **FAIL HARD** (Raise `AgnosticMaskError`) | `AgnosticMaskError` |
 
 ---
 
-## 7. Identity Preservation Rules
-
-The mask generator enforces non-negotiable identity preservation:
-
-1.  **Face & Head Protection:** `FACE`, `HAIR`, `HEAD_ACCESSORY` pixel regions are **always** forced to `0` (Preserve).
-2.  **Limb & Skin Protection:** `LEFT_ARM`, `RIGHT_ARM`, `LEFT_LEG`, `RIGHT_LEG` pixel regions outside the target garment category are strictly preserved.
-3.  **Pose Line Vector Protection:** When arms overlap the upper body, skeletal limb line vectors (shoulder $\rightarrow$ elbow $\rightarrow$ wrist) are rendered with a protective radius to prevent erasing forearm skin or hands.
-4.  **Non-Target Garment Protection:** For `UPPER_BODY` try-on, `LOWER_GARMENT` pixels are strictly preserved; for `LOWER_BODY` try-on, `UPPER_GARMENT` pixels are strictly preserved.
-5.  **Background Protection:** `BACKGROUND` (label 0) is forced to `0` (Preserve).
-
----
-
-## 8. Morphological Processing Strategy
-
-*   **Dilation:** Clothing boundaries in semantic parsing masks often have slight gaps or tight fits around collars, armpits, and hems. Dilating the initial clothing mask outward by $15 \text{ to } 20$ pixels ensures that old garment collars and sleeve edges are fully covered by the inpainting mask.
-*   **Implementation:** Pure **Pillow** (`PIL.ImageFilter.MaxFilter(size=33)`) or **NumPy** 2D array maximum filter. No OpenCV (`cv2`) dependency required.
-
----
-
-## 9. DensePose Decision
-
-*   **Decision:** **NOT REQUIRED BEFORE MASK GENERATION**.
-*   **Justification:** Agnostic mask generation is a 2D spatial segmentation process relying exclusively on 2D human parsing + 2D skeletal pose landmarks. DensePose 3D surface maps (if required for StableVITON or IDM-VTON in Phase 1.2.6) belong in a separate VTON conditioning service, keeping `BaseAgnosticMaskGenerator` clean and fast.
-
----
-
-## 10. Proposed Schema & Interface Definitions
-
-### A. New Schema Contract (`app/schemas/ai.py`)
-
-```python
-class AgnosticMaskResult(BaseModel):
-    """Contract emitted by clothing-agnostic mask generation stage."""
-
-    mask_id: str = Field(
-        ..., json_schema_extra={"example": "agnostic_mask_proc_person_001_a82f19c4"}
-    )
-    mask_ref: str = Field(
-        ...,
-        json_schema_extra={
-            "example": "data/processed/agnostic_masks/mask_proc_person_001_a82f19c4.png"
-        },
-    )
-    garment_category: str = Field(
-        ..., json_schema_extra={"example": "upper_body"}
-    )
-    dimensions: Optional[ImageDimensions] = Field(default=None)
-    metadata: dict[str, Any] = Field(default_factory=dict)
-```
-
-### B. New Abstract Interface (`app/services/ai/interfaces/agnostic_mask_generator.py`)
-
-```python
-from abc import ABC, abstractmethod
-from app.schemas.ai import (
-    AgnosticMaskResult,
-    GarmentInput,
-    HumanParsingResult,
-    PoseEstimationResult,
-    PreprocessingResult,
-)
-
-class BaseAgnosticMaskGenerator(ABC):
-    """Abstract interface defining clothing-agnostic mask generation stage."""
-
-    @abstractmethod
-    async def generate(
-        self,
-        preprocessed: PreprocessingResult,
-        parsing: HumanParsingResult,
-        pose: PoseEstimationResult,
-        garment: GarmentInput,
-    ) -> AgnosticMaskResult:
-        """Asynchronously generates binary clothing-agnostic mask for VTON inpainting."""
-        pass
-```
-
----
-
-## 11. Pipeline Integration Strategy
-
-In Phase 1.2.5B, `VirtualWearPipeline` will be extended to include Stage 3 (Agnostic Mask Generation):
-
-```python
-# Stage 1: Preprocessing
-preprocessed = await self.preprocessor.process(person, garment)
-
-# Stage 2: Concurrent Human Parsing & Pose Estimation
-parsing_result, pose_result = await asyncio.gather(
-    self.human_parser.parse(preprocessed),
-    self.pose_estimator.estimate(preprocessed),
-)
-
-# Stage 3: Agnostic Mask Generation (New Stage)
-agnostic_mask = await self.agnostic_mask_generator.generate(
-    preprocessed, parsing_result, pose_result, garment
-)
-
-# Stage 4: Virtual Try-On Engine
-raw_render = await self.tryon_engine.generate(
-    preprocessed, parsing_result, pose_result, agnostic_mask, garment
-)
-
-# Stage 5: Postprocessing
-final_result = await self.postprocessor.process(raw_render)
-```
-
-*   `MockAgnosticMaskGenerator` will be created to maintain fast, deterministic testing without requiring real disk images.
-
----
-
-## 12. Quality Validation & Error Handling
-
-### Automated Validation Rules in Phase 1.2.5B Tests
-1.  **Non-Empty Mask:** Replace pixel count (`pixel_value == 255`) $> 0$.
-2.  **Bounded Coverage:** Replace region area $< 70\%$ of total image area.
-3.  **Zero Face Overlap:** Intersection of `FACE` pixels and `Replace` mask pixels must be $0$.
-4.  **Binary Integrity:** Image pixel values must contain strictly `{0, 255}`.
-5.  **Dimensions Match:** Mask dimensions must equal `preprocessed.person_dimensions`.
-
-### Controlled Error Policy
-If parsing or pose artifacts are missing/corrupted, raise `AgnosticMaskError` with clear contextual details.
-
----
-
-## 13. Phase 1.2.5B Implementation Plan Preview
+## 10. Phase 1.2.5B Implementation Plan Preview
 
 When Phase 1.2.5B begins:
 
-1.  **Schemas & Interfaces:** Add `AgnosticMaskResult` to `app/schemas/ai.py` and create `BaseAgnosticMaskGenerator` interface.
+1.  **Schemas & Interfaces:** Add `GarmentCategory` enum and `AgnosticMaskResult` to `app/schemas/ai.py`; create `BaseAgnosticMaskGenerator` interface in `app/services/ai/interfaces/agnostic_mask_generator.py`.
 2.  **Package Setup:** Create `app/services/ai/agnostic_mask/` package (`__init__.py`, `generator.py`, `mock_generator.py`).
-3.  **Real Implementation:** Implement `RealAgnosticMaskGenerator` with Pillow/NumPy morphological dilation, pose line vector protection, and category-specific category masks.
-4.  **Mock Implementation:** Create `MockAgnosticMaskGenerator` for fast offline unit/pipeline tests.
-5.  **Pipeline Update:** Update `VirtualWearPipeline` to inject and execute `BaseAgnosticMaskGenerator`.
-6.  **Tests:** Add unit tests for mask logic, category handling, identity protection, path traversal, and pipeline integration.
+3.  **Real Implementation:** Implement `RealAgnosticMaskGenerator` with resolution-scaled dilation, sleeve replacement rules, face/neck protection, and atomic artifact writes.
+4.  **Pipeline Integration:** Update `VirtualWearPipeline` to execute Stage 3 `AgnosticMaskGenerator`.
+5.  **Tests:** Add unit tests for resolution scaling, arm replacement, face protection, path traversal, and pipeline integration.
 
 ---
