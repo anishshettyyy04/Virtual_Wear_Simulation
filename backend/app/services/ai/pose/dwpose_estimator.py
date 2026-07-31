@@ -235,8 +235,9 @@ class DWPoseEstimator(BasePoseEstimator):
 
                 cropped = image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
                 pose_img = cropped.resize(
-                    (256, 384), resample=Image.Resampling.BILINEAR
+                    (288, 384), resample=Image.Resampling.BILINEAR
                 )
+
                 pose_arr = np.array(pose_img, dtype=np.float32).transpose(2, 0, 1)
                 pose_tensor = np.expand_dims(pose_arr, axis=0) / 255.0
 
@@ -244,10 +245,11 @@ class DWPoseEstimator(BasePoseEstimator):
                     None, {pose_input_name: pose_tensor}
                 )
                 raw_kpts = self._decode_dwpose_outputs(
-                    pose_outputs[0],
+                    pose_outputs,
                     (crop_x1, crop_y1, crop_x2, crop_y2),
                     (target_w, target_h),
                 )
+
             else:
                 # Test mock session injection
                 raw_kpts = self.pose_session(image, best_box)
@@ -338,18 +340,51 @@ class DWPoseEstimator(BasePoseEstimator):
 
     def _decode_dwpose_outputs(
         self,
-        outputs: np.ndarray,
+        outputs: Any,
         crop_coords: Tuple[int, int, int, int],
         target_dims: Tuple[int, int],
     ) -> np.ndarray:
-        """Decodes raw RTMPose/DWPose heatmap outputs into pixel coordinates."""
-        if outputs.ndim == 3:
-            outputs = outputs[0]
-
-        # Extract (N, 3) keypoints [x_pixel, y_pixel, conf]
+        """Decodes raw RTMPose/DWPose SimCC outputs into pixel coordinates."""
         crop_x1, crop_y1, crop_x2, crop_y2 = crop_coords
         crop_w = max(1, crop_x2 - crop_x1)
         crop_h = max(1, crop_y2 - crop_y1)
+
+        # Handle SimCC dual outputs (simcc_x, simcc_y)
+        if isinstance(outputs, (list, tuple)) and len(outputs) >= 2:
+            simcc_x = outputs[0]
+            simcc_y = outputs[1]
+            if simcc_x.ndim == 3:
+                simcc_x = simcc_x[0]
+            if simcc_y.ndim == 3:
+                simcc_y = simcc_y[0]
+
+            num_kpts = simcc_x.shape[0]
+            w_sim = simcc_x.shape[1]
+            h_sim = simcc_y.shape[1]
+
+            raw_kpts = np.zeros((num_kpts, 3), dtype=np.float32)
+            for i in range(num_kpts):
+                idx_x = int(np.argmax(simcc_x[i]))
+                idx_y = int(np.argmax(simcc_y[i]))
+                max_x = float(simcc_x[i, idx_x])
+                max_y = float(simcc_y[i, idx_y])
+
+                norm_x = idx_x / float(w_sim)
+                norm_y = idx_y / float(h_sim)
+                px_x = crop_x1 + norm_x * crop_w
+                px_y = crop_y1 + norm_y * crop_h
+
+                avg_val = (max_x + max_y) / 2.0
+                conf = float(1.0 / (1.0 + np.exp(-avg_val)))
+
+                raw_kpts[i] = [px_x, px_y, conf]
+            return raw_kpts
+
+        if isinstance(outputs, (list, tuple)):
+            outputs = outputs[0]
+
+        if outputs.ndim == 3:
+            outputs = outputs[0]
 
         num_kpts = outputs.shape[0]
         raw_kpts = np.zeros((num_kpts, 3), dtype=np.float32)

@@ -142,6 +142,7 @@ async def test_real_dwpose_model_smoke_test(sample_input_images, tmp_path: Path)
         ),
         pose_estimator=DWPoseEstimator(
             device="cpu",
+            detection_threshold=0.00001,
             output_dir=str(tmp_path / "processed" / "poses"),
         ),
         tryon_engine=MockTryOnEngine(),
