@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "message": "System health check status",
+  "data": {
+    "status": "healthy",
+    "products": "loaded",
+    "users": "loaded",
+    "configuration": "loaded",
+    "strategy": "RuleBased",
+    "cache": "enabled",
+    "analytics": "available"
+  },
+  "timestamp": "2026-07-31T23:00:00Z",
+  "requestId": "d4e5f6a7-b89c-0d1e-2f3a-4b5c6d7e8f9a"
+}

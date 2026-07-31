@@ -1,24 +1,11 @@
-# AI Virtual Wear Simulation — Project Core Repository
+# Technical Documentation — Phase 1.4: Backend REST API
 
-[![Backend CI](https://github.com/anishshettyyy04/Virtual_Wear_Simulation/actions/workflows/backend.yml/badge.svg)](https://github.com/anishshettyyy04/Virtual_Wear_Simulation/actions/workflows/backend.yml)
-![Version](https://img.shields.io/badge/version-v1.0.0--phase1-blue.svg)
-![Python](https://img.shields.io/badge/python-3.11-green.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.116.1-009688.svg)
-
-Welcome to the **AI Virtual Wear Simulation** repository. This project powers an end-to-end e-commerce apparel simulation experience featuring personalized outfit recommendations, 3D body preference modeling, REST APIs, and AI Virtual Try-On execution using IDM-VTON.
+## Executive Summary
+Phase 1.4 implements the **Backend REST API** for the **AI Virtual Wear Simulation** project using FastAPI, Pydantic v2, Uvicorn, pytest, and a decoupled service layer. It exposes all Phase 1 subsystems—Product Catalog (Phase 1.1), User Preference Modeling (Phase 1.2), Recommendation Engine & Caching (Phase 1.3), Health Monitoring, and Performance Analytics—through production-ready REST endpoints ready for React frontend and IDM-VTON AI Virtual Try-On pipeline integration.
 
 ---
 
-## 🌟 Current Release: Version 1.0.0-phase1
-
-**Phase 1 Backend System Complete!**
-- 📋 [Release Notes](RELEASE_NOTES.md)
-- 📜 [Changelog](CHANGELOG.md)
-- 📌 [Version File](VERSION) (`v1.0.0-phase1`)
-
----
-
-## Architecture Overview
+## 1. REST API Architecture
 
 ```
                                   ┌───────────────────────────────┐
@@ -34,15 +21,14 @@ Welcome to the **AI Virtual Wear Simulation** repository. This project powers an
         ┌─────────────────────────────────┼─────────────────────────────────┐
         ▼                                 ▼                                 ▼
 ┌──────────────┐                  ┌──────────────┐                  ┌──────────────┐
-│ Request ID   │                  │ CORS         │                  │ Structured   │
-│ Middleware   │                  │ Middleware   │                  │ Logger       │
+│ Logging Middleware              │ CORS Middleware              │ Global Error Handler
 └───────┬──────┘                  └───────┬──────┘                  └───────┬──────┘
         │                                 │                                 │
         └─────────────────────────────────┼─────────────────────────────────┘
                                           │
                                           ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│                                   Versioned Routers (v1)                                 │
+│                                   API Route Handlers                                     │
 │  GET /products | GET /users | POST /recommendations | GET /health | GET /metrics         │
 └─────────────────────────────────────────┬────────────────────────────────────────────────┘
                                           │
@@ -61,46 +47,78 @@ Welcome to the **AI Virtual Wear Simulation** repository. This project powers an
 
 ---
 
-## 📚 Integration Guides & Technical Documentation
+## 2. Endpoint Catalog
 
-- 🎨 **React Frontend Guide (Ashwin)**: [`backend/docs/frontend-guide.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/docs/frontend-guide.md)
-- 🤖 **AI Try-On Guide (Anish / IDM-VTON)**: [`backend/docs/ai-guide.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/docs/ai-guide.md)
-- 📊 **Monitoring & Observability Guide**: [`backend/docs/monitoring.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/docs/monitoring.md)
-- 📝 **API Contracts & JSON Schemas**: [`backend/contracts/`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/contracts/)
-- 💡 **API Response Payload Examples**: [`backend/examples/`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/examples/)
-- 📁 **System Quality & Audit Reports**: [`backend/reports/`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/)
-
----
-
-## Quick Start & Developer Commands (`Makefile`)
-
-Start dev server or run tests using `make` from root:
-
-```bash
-make run        # Start FastAPI dev server (http://localhost:8000)
-make test       # Run unit and API integration tests
-make smoke      # Run automated smoke test suite
-make validate   # Validate JSON datasets against schemas
-make benchmark  # Run recommendation engine benchmark
-make report     # Generate performance & latency report
-```
+| HTTP Method | Endpoint Path | Description | Response Schema |
+| :--- | :--- | :--- | :--- |
+| **`GET`** | `/api/v1/products` | Returns all products with optional category & gender filters | `ProductListResponse` |
+| **`GET`** | `/api/v1/products/{productId}` | Returns single product details by ID or 404 | `ProductResponse` |
+| **`GET`** | `/api/v1/users/{userId}` | Returns user preference profile by ID or 404 | `UserResponse` |
+| **`POST`** | `/api/v1/recommendations` | Generates personalized product recommendations | `RecommendationResponse` |
+| **`GET`** | `/api/v1/health` | Returns system health status across all subsystems | `HealthResponse` |
+| **`GET`** | `/api/v1/metrics` | Returns performance benchmarks, analytics & cache stats | `MetricsResponse` |
 
 ---
 
-## Interactive OpenAPI Documentation
+## 3. Middleware Architecture
 
+1. **`LoggingMiddleware`** (`backend/api/middleware/logging.py`): Logs request method, path, HTTP status, and latency in milliseconds (`X-Process-Time-Ms`).
+2. **`ExceptionMiddleware`** (`backend/api/middleware/exception_handler.py`): Catches HTTP 404/400 exceptions, Pydantic validation errors (422), and unexpected server errors (500), returning clean JSON envelopes.
+3. **`CORSMiddleware`** (`backend/api/middleware/cors.py`): Configures cross-origin requests using `ALLOWED_ORIGINS` environment variables.
+
+---
+
+## 4. Service Layer Decoupling
+
+Routes strictly execute request parsing and delegate business logic to decoupled services:
+- **`ProductService`**: Catalog loading, filtering, and single-item retrieval.
+- **`UserService`**: User profile lookups.
+- **`RecommendationService`**: Invokes Phase 1.3 `RecommendationEngine` and `RecommendationCache`.
+- **`HealthService`**: Executes `check_system_health()`.
+- **`MetricsService`**: Loads exported `recommendation_metrics.json` analytics.
+
+---
+
+## 5. OpenAPI, Swagger UI & ReDoc Documentation
+
+Interactive API documentation is automatically exposed by FastAPI:
 - **Swagger UI**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
-- **OpenAPI Schema**: `http://localhost:8000/openapi.json`
+- **OpenAPI JSON Schema**: `http://localhost:8000/openapi.json`
 
 ---
 
-## Docker Deployment
+## 6. Testing & Quality Assurance
 
+API integration tests in [`backend/tests/test_api.py`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/tests/test_api.py) verify:
+- Endpoints return expected status codes (200, 404, 422).
+- Pydantic models validate response structures.
+- FastAPI docs endpoints (`/docs`, `/redoc`) are reachable.
+
+Run tests using:
 ```bash
-# Build Docker image
-docker build -t virtual-wear-backend .
-
-# Launch container with Docker Compose
-docker-compose up -d
+python backend/tests/test_api.py
 ```
+
+---
+
+## 7. Production Enhancements
+
+- **API Versioning**: Modular route organization under `backend/api/v1/` with backward compatibility wrappers.
+- **Centralized Configuration Management**: Dynamic setting management in `backend/config/settings.py`.
+- **Request Tracing**: `RequestIdMiddleware` generating UUID v4 tracking IDs (`X-Request-ID`) attached to every request state and logger output.
+- **Standardized Response Envelope**: `BaseResponse[T]` schema enforcing `{ success, message, data, timestamp, requestId }` across all endpoints and exception handlers.
+- **Structured JSON Logging**: Custom JSON logger outputting structured events with latency and request tracing context.
+- **Startup Dependency Validation**: Lifespan startup validation confirming datasets, configurations, schemas, recommendation engine, cache, and health readiness before accepting requests.
+- **Docker Containerization**: Production `Dockerfile`, `docker-compose.yml`, and `.dockerignore`.
+- **Continuous Integration (CI/CD)**: GitHub Actions workflow (`.github/workflows/backend.yml`).
+- **Postman API Collection**: Collection export (`VirtualWearAPI.postman_collection.json`).
+
+---
+
+## 8. Future Enhancements (Phase 2.0 Roadmap)
+
+1. **Authentication & Authorization**: JWT token / OAuth2 authentication mapping user sessions to `userId`.
+2. **Database Migration**: PostgreSQL / MongoDB integration replacing seed JSON files.
+3. **AI Virtual Try-On Pipeline Integration (IDM-VTON)**: Endpoint `POST /api/v1/try-on` connecting user photos and recommended garments.
+

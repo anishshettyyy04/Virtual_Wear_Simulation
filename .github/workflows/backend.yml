@@ -1,0 +1,41 @@
+name: Backend REST API CI
+
+on:
+  push:
+    branches: [ main, feature/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Validate Product Dataset
+        run: |
+          python backend/scripts/validate_products.py
+
+      - name: Validate User Preference Dataset
+        run: |
+          python backend/scripts/validate_user_preferences.py
+
+      - name: Run Recommendation Engine Unit Tests
+        run: |
+          python backend/tests/test_recommendation.py
+
+      - name: Run REST API Integration Tests
+        run: |
+          python backend/tests/test_api.py

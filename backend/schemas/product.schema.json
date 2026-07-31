@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://virtualwear.simulation/schemas/product.schema.json",
+  "title": "Product Schema",
+  "description": "Production-ready JSON schema validating clothing product data models for Virtual Wear Simulation.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "category",
+    "brand",
+    "price",
+    "currency",
+    "sizes",
+    "colors",
+    "material",
+    "fit",
+    "style",
+    "occasion",
+    "gender",
+    "season",
+    "image",
+    "thumbnail",
+    "description",
+    "rating",
+    "stock",
+    "tags",
+    "isAvailable",
+    "createdAt",
+    "updatedAt"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Z]{2,4}\\d{3}$",
+      "description": "Unique product identifier (e.g. TS001, JN002)"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Non-empty display name of the product"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "tshirt",
+        "shirt",
+        "jeans",
+        "jacket",
+        "hoodie",
+        "dress",
+        "kurta",
+        "pants"
+      ],
+      "description": "Standardized apparel category"
+    },
+    "brand": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Manufacturer or brand name"
+    },
+    "price": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "Price value, must be strictly greater than 0"
+    },
+    "currency": {
+      "type": "string",
+      "enum": ["INR"],
+      "description": "Standard ISO currency code"
+    },
+    "sizes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Available clothing sizes (e.g. S, M, L, XL)"
+    },
+    "colors": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Available product colors"
+    },
+    "material": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Fabric material composition (e.g. Cotton, Denim, Silk)"
+    },
+    "fit": {
+      "type": "string",
+      "enum": ["slim", "regular", "relaxed", "oversized"],
+      "description": "Standardized garment fit type"
+    },
+    "style": {
+      "type": "string",
+      "enum": ["casual", "formal", "streetwear", "ethnic", "sports"],
+      "description": "Standardized fashion style"
+    },
+    "occasion": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Target occasion or use case (e.g. Daily Wear, Party, Festive)"
+    },
+    "gender": {
+      "type": "string",
+      "enum": ["men", "women", "unisex"],
+      "description": "Target gender demographic"
+    },
+    "season": {
+      "type": "string",
+      "enum": ["summer", "winter", "monsoon", "all-season"],
+      "description": "Seasonal applicability"
+    },
+    "image": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^/assets/products/[a-z]+/[a-z0-9_-]+\\.(jpg|jpeg|png|webp)$",
+      "description": "Valid relative image path starting with /assets/products/"
+    },
+    "thumbnail": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^/assets/products/[a-z]+/[a-z0-9_-]+\\.(jpg|jpeg|png|webp)$",
+      "description": "Valid relative thumbnail path starting with /assets/products/"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Detailed text description of the product"
+    },
+    "rating": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 5,
+      "description": "Average customer rating between 0 and 5"
+    },
+    "stock": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Available inventory count (non-negative integer)"
+    },
+    "tags": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Search and recommendation tags"
+    },
+    "isAvailable": {
+      "type": "boolean",
+      "description": "Stock availability flag"
+    },
+    "createdAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "description": "ISO 8601 creation timestamp"
+    },
+    "updatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "description": "ISO 8601 last update timestamp"
+    }
+  }
+}

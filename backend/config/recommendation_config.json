@@ -1,0 +1,26 @@
+{
+  "weights": {
+    "category": 35,
+    "style": 20,
+    "color": 15,
+    "brand": 10,
+    "fit": 10,
+    "budget": 10
+  },
+  "boosts": {
+    "wishlist": 15,
+    "purchaseHistory": 10,
+    "favoriteColor": 5,
+    "climate": 5
+  },
+  "penalties": {
+    "recommendationHistory": 10
+  },
+  "limits": {
+    "maxRecommendations": 10
+  },
+  "cache": {
+    "enabled": true,
+    "ttlSeconds": 300
+  }
+}
