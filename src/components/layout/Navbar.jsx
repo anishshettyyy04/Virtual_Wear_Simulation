@@ -1,8 +1,17 @@
+import { useRef } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Shirt, Menu, Sparkles, Cpu, Github } from 'lucide-react';
 import { APP_CONFIG } from '@/constants/appConfig';
 
-export const Navbar = ({ onOpenMobileMenu }) => {
+export const Navbar = ({ onOpenMobileMenu, isMobileMenuOpen = false }) => {
+  const menuButtonRef = useRef(null);
+
+  const handleOpenMenu = () => {
+    if (onOpenMobileMenu) {
+      onOpenMobileMenu(menuButtonRef);
+    }
+  };
+
   const navLinks = [
     { label: 'Home', path: '/' },
     { label: 'Upload', path: '/upload' },
@@ -16,7 +25,7 @@ export const Navbar = ({ onOpenMobileMenu }) => {
           {/* Brand Logo */}
           <NavLink
             to="/"
-            className="flex items-center gap-2.5 group"
+            className="flex items-center gap-2.5 group focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-xl p-1"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 p-0.5 shadow-lg shadow-blue-600/30 group-hover:scale-105 transition-transform">
               <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
@@ -42,13 +51,13 @@ export const Navbar = ({ onOpenMobileMenu }) => {
           </NavLink>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800/80">
+          <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800/80" aria-label="Desktop navigation">
             {navLinks.map((link) => (
               <NavLink
                 key={link.path}
                 to={link.path}
                 className={({ isActive }) =>
-                  `px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 ${
+                  `px-5 py-1.5 rounded-full text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                       : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -71,12 +80,12 @@ export const Navbar = ({ onOpenMobileMenu }) => {
               <span className="hidden lg:inline">Engine Online</span>
             </div>
 
-            {/* GitHub Placeholder Icon */}
+            {/* GitHub Repository Icon */}
             <a
               href="https://github.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 border border-slate-800 transition-colors flex items-center justify-center"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 border border-slate-800 transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="GitHub Repository Placeholder"
               title="GitHub Repository (Placeholder)"
             >
@@ -90,15 +99,18 @@ export const Navbar = ({ onOpenMobileMenu }) => {
               href="https://github.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 border border-slate-800 transition-colors flex sm:hidden items-center justify-center"
+              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 border border-slate-800 transition-colors flex sm:hidden items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
               aria-label="GitHub Repository"
             >
               <Github size={18} />
             </a>
             <button
-              onClick={onOpenMobileMenu}
-              className="p-2 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition-colors"
-              aria-label="Open Mobile Menu"
+              ref={menuButtonRef}
+              onClick={handleOpenMenu}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation-drawer"
+              className="p-2 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-xl border border-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Open Mobile Navigation Menu"
             >
               <Menu size={20} />
             </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Navbar } from './Navbar';
 import { Sidebar } from './Sidebar';
@@ -7,16 +7,28 @@ import { MobileDrawer } from './MobileDrawer';
 
 export const MainLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const menuButtonTriggerRef = useRef(null);
+
+  const handleOpenMobileMenu = (buttonRef) => {
+    if (buttonRef) {
+      menuButtonTriggerRef.current = buttonRef.current;
+    }
+    setIsMobileMenuOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-blue-500 selection:text-white">
       {/* Top Header Navigation */}
-      <Navbar onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
+      <Navbar
+        onOpenMobileMenu={handleOpenMobileMenu}
+        isMobileMenuOpen={isMobileMenuOpen}
+      />
 
       {/* Mobile Menu Drawer */}
       <MobileDrawer
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
+        triggerRef={menuButtonTriggerRef}
       />
 
       {/* Main Container Layout with Sidebar (desktop only) and Content Area */}

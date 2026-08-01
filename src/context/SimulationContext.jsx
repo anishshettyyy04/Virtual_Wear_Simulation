@@ -1,8 +1,7 @@
-import { createContext, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { APP_CONFIG } from '@/constants/appConfig';
 import { simulationService } from '@/services/simulationService';
-
-export const SimulationContext = createContext(null);
+import { SimulationContext } from './SimulationContext';
 
 export const SimulationProvider = ({ children }) => {
   const [userAvatar, setUserAvatar] = useState(null); // { file, previewUrl }
@@ -49,7 +48,7 @@ export const SimulationProvider = ({ children }) => {
       formData.append('fabricWeight', settings.FABRIC_WEIGHT);
 
       const result = await simulationService.processSimulation(formData);
-      
+
       // Inject fallback preview URLs if mock images are used
       const finalResult = {
         ...result,

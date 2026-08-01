@@ -1,5 +1,6 @@
 import { useContext } from 'react';
-import { SimulationContext } from '@/context/SimulationContext';
+import { SimulationContext } from '@/context';
+
 
 export const useSimulation = () => {
   const context = useContext(SimulationContext);
