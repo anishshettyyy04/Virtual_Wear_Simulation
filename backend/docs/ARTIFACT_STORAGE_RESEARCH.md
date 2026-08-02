@@ -410,7 +410,65 @@ class StorageHealthReport(BaseModel):
 
 ---
 
-## 11. Artifact Index Architecture
+## 11. Storage Layer Component Decomposition (Phase 1.2.9B Refinement)
+
+To improve separation of responsibilities and maintain provider independence, the storage architecture is decomposed into dedicated services.
+
+### 11.1 BaseArtifactRegistry
+Abstracts artifact indexing and tracking.
+- **Responsibilities**: `register()`, `update()`, `get()`, `exists()`, `list()`, `delete()`, `query()`.
+- **Implementations**: `SQLiteArtifactRegistry` (isolated boundary). Future migrations (PostgreSQL/Redis) require no `ArtifactManager` changes.
+
+### 11.2 ContentAddressableIndex
+Manages CAS-specific indexing logic independent of physical storage.
+- **Responsibilities**: Checksum lookup, duplicate detection, checksum registration, and reference counting.
+
+### 11.3 ArtifactLocator
+Abstracts path and URI resolution.
+- **Responsibilities**: Resolve `artifact://` URIs, locate manifests and metadata, and abstract filesystem/CAS layouts.
+
+### 11.4 ArtifactMetadataStore
+Separates metadata persistence from the core manager.
+- **Responsibilities**: Save, update, retrieve, version, and query metadata.
+
+### 11.5 ManifestBuilder
+Dedicated builder for artifact manifest generation.
+- **Responsibilities**: DAG generation, lineage construction, provenance tracking, timestamps, version metadata, and relationships.
+
+### 11.6 ArtifactVerifier
+Service for integrity and corruption checks.
+- **Responsibilities**: SHA-256 verification, corruption detection, orphan detection, missing artifact detection, and manifest validation.
+
+### 11.7 ArtifactStatistics
+Provides metrics for health and admin endpoints.
+- **Responsibilities**: Total artifacts, storage usage, artifact counts, duplicate count, CAS reuse ratio, average size, and storage growth metrics.
+
+### 11.8 Enhanced ArtifactTransaction
+Artifact transactions include a deterministic journal for recovery.
+- **Responsibilities**: Track staged, committed, and rolled-back files; log timestamps and transaction state for deterministic debugging and recovery.
+
+### 11.9 RetentionManager
+Separates retention policy evaluation from physical cleanup.
+- **Responsibilities**: Determine expiration, enforce retention policies, and schedule cleanup execution by delegating to the `CleanupService`.
+
+---
+
+## 12. Expanded Test Coverage Strategy
+
+The new architecture requires expanded test validation to ensure component isolation:
+- **CAS Deduplication**: Verify duplicate uploads reuse physical hashes.
+- **Concurrency**: Test concurrent registry and storage writes.
+- **URI Resolution**: Validate `ArtifactLocator` routing.
+- **Transaction Recovery**: Test rollback recovery using transaction journals.
+- **Integrity**: Test checksum mismatch and corruption detection via `ArtifactVerifier`.
+- **Manifests**: Validate DAG lineage accuracy via `ManifestBuilder`.
+- **Orphan Detection**: Identify untracked files in storage.
+- **Statistics**: Validate metric generation.
+- **Retention**: Verify policy enforcement via `RetentionManager`.
+
+---
+
+## 13. Artifact Index Architecture
 
 To support fast querying, metadata lookups, and orphan file detection across millions of artifacts, we evaluated 4 indexing architectures:
 
@@ -429,7 +487,7 @@ To support fast querying, metadata lookups, and orphan file detection across mil
 
 ---
 
-## 12. Manifest V2 Evolution & Portable Export Bundles
+## 14. Manifest V2 Evolution & Portable Export Bundles
 
 ### Manifest V2 Schema Extensions
 Manifest V2 incorporates full DAG dependency lineage, checksum manifests, and capability metadata:
@@ -493,7 +551,7 @@ job_20260802_a81f9c3d_bundle/
 
 ---
 
-## 13. Cloud Storage Migration Readiness Matrix
+## 15. Cloud Storage Migration Readiness Matrix
 
 The abstract driver architecture ensures seamless transition to cloud object storage providers:
 
@@ -507,67 +565,74 @@ The abstract driver architecture ensures seamless transition to cloud object sto
 
 ---
 
-## 14. Complete System Architecture Diagram
+## 16. Complete System Architecture Diagram
 
 ```text
-                    ┌────────────────────────────────────────┐
-                    │          VirtualWearPipeline           │
-                    └───────────────────┬────────────────────┘
-                                        │
-                                        ▼
-                    ┌────────────────────────────────────────┐
-                    │           ArtifactManager              │
-                    └───────────────────┬────────────────────┘
-                                        │
-                    ┌───────────────────▼────────────────────┐
-                    │            StorageResolver             │
-                    │   (Resolves artifact:// URIs to ops)   │
-                    └───────────────────┬────────────────────┘
-                                        │
-                    ┌───────────────────▼────────────────────┐
-                    │         StorageProviderRegistry        │
-                    │  (Holds Local, S3, GCS, Azure drivers) │
-                    └───────────────────┬────────────────────┘
-                                        │
-             ┌──────────────────────────┼──────────────────────────┐
-             ▼                          ▼                          ▼
-┌──────────────────────────┐┌──────────────────────────┐┌──────────────────────────┐
-│     ArtifactRegistry     ││   BaseArtifactStorage    ││   ArtifactTransaction    │
-│  (SQLite / PostgreSQL)   ││(Local / S3 / GCS Driver) ││  (Staging / Commit / RB) │
-└──────────────────────────┘└──────────────────────────┘└──────────────────────────┘
-             │                          │                          │
-             v                          v                          v
-┌──────────────────────────┐┌──────────────────────────┐┌──────────────────────────┐
-│   Metadata Index DB      ││ CAS Storage Layout       ││ Temp Staging Dir         │
-│  (data/metadata/art.db)  ││ (data/cas/sha256/xx/yy/) ││ (data/temp/stage_id/)    │
-└──────────────────────────┘└──────────────────────────┘└──────────────────────────┘
+                    ┌─────────────────────────────────────────┐
+                    │           VirtualWearPipeline           │
+                    └────────────────────┬────────────────────┘
+                                         │
+                                         ▼
+                    ┌─────────────────────────────────────────┐
+                    │            ArtifactManager              │
+                    └────────────────────┬────────────────────┘
+                                         │
+             ┌───────────────────────────┼───────────────────────────┐
+             ▼                           ▼                           ▼
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│     ManifestBuilder     │ │   BaseArtifactStorage   │ │   BaseArtifactRegistry  │
+│   (DAG & Provenance)    │ │ (Local/S3/GCS Drivers)  │ │ (SQLite/PG Indexing)    │
+└─────────────────────────┘ └────────────┬────────────┘ └────────────┬────────────┘
+             │                           │                           │
+             ▼                           ▼                           ▼
+┌─────────────────────────┐ ┌─────────────────────────┐ ┌─────────────────────────┐
+│    ArtifactVerifier     │ │  LocalFileStorage       │ │ SQLiteArtifactRegistry  │
+│  (Checksum & Integrity) │ └────────────┬────────────┘ └────────────┬────────────┘
+└─────────────────────────┘              │                           │
+             │                           ▼                           ▼
+             ▼              ┌─────────────────────────┐ ┌─────────────────────────┐
+┌─────────────────────────┐ │ ContentAddressableIndex │ │  ArtifactMetadataStore  │
+│   ArtifactStatistics    │ │ (CAS Dup & Hash Mgmt)   │ │ (Versioned Metadata)    │
+│  (Health & Metrics)     │ └─────────────────────────┘ └─────────────────────────┘
+└─────────────────────────┘
+             
+             ┌─────────────────────────┐ ┌─────────────────────────┐
+             │    RetentionManager     │ │     ArtifactLocator     │
+             │  (Policies & Schedule)  │ │   (URI / Path Mgmt)     │
+             └────────────┬────────────┘ └─────────────────────────┘
+                          │
+                          ▼
+             ┌─────────────────────────┐
+             │      CleanupService     │
+             │  (Physical Deletions)   │
+             └─────────────────────────┘
 ```
 
 ---
 
-## 15. Phase 1.2.9B Implementation Roadmap
+## 17. Phase 1.2.9B Implementation Roadmap
 
 1. **Step 1 — Create Core Schemas (`app/schemas/artifact.py`)**:
    - Define `ArtifactReference`, `ArtifactCategory`, `ArtifactCapability`, `ArtifactProvenance`, `ArtifactMetadata`, `ArtifactManifestV2`.
 2. **Step 2 — Implement Storage Abstraction (`app/services/storage/`)**:
-   - Implement `BaseArtifactStorage` and `LocalArtifactStorage` with `artifact://` URI resolution.
+   - Implement `BaseArtifactStorage` and `LocalArtifactStorage` with `ArtifactLocator`.
 3. **Step 3 — Implement Storage Orchestration (`app/services/storage/provider.py`)**:
    - Implement `StorageCapabilities`, `StorageProviderConfig`, `StorageProviderRegistry`, and `StorageResolver`.
 4. **Step 4 — Implement Atomic Staging (`app/services/storage/transaction.py`)**:
-   - Implement `ArtifactTransaction` manager for atomic stage staging and rollbacks.
-5. **Step 5 — Implement Registry (`app/services/artifacts/registry.py`)**:
-   - Implement `BaseArtifactRegistry` and `SQLiteArtifactRegistry` (or `MemoryArtifactRegistry` fallback).
-6. **Step 6 — Implement Artifact Manager (`app/services/artifacts/manager.py`)**:
-   - Implement `ArtifactManager` orchestrating storage, registry, checksum calculations, and DAG manifest generation.
-7. **Step 7 — Pipeline Integration & Cleanup Service Upgrade**:
-   - Wire `ArtifactManager` into `VirtualWearPipeline` stages and upgrade `JobCleanupService`.
-8. **Step 8 — Unit Testing & Verification**:
-   - Add test suite in `tests/test_artifact_manager.py`.
+   - Implement `ArtifactTransaction` manager with journaling.
+5. **Step 5 — Implement Registry & Components (`app/services/artifacts/`)**:
+   - Implement `BaseArtifactRegistry`, `SQLiteArtifactRegistry`, `ArtifactMetadataStore`, and `ContentAddressableIndex`.
+6. **Step 6 — Implement Services (`app/services/artifacts/`)**:
+   - Implement `ManifestBuilder`, `ArtifactVerifier`, `ArtifactStatistics`, and `RetentionManager`.
+7. **Step 7 — Implement Artifact Manager (`app/services/artifacts/manager.py`)**:
+   - Tie everything together into `ArtifactManager`.
+8. **Step 8 — Pipeline Integration & Verification**:
+   - Wire `ArtifactManager` into `VirtualWearPipeline` and run test suites.
 
 ---
 
-## 16. GO / NO-GO Recommendation
+## 18. GO / NO-GO Recommendation
 
 ### Recommendation: **GO FOR PHASE 1.2.9B IMPLEMENTATION**
 
-- **Rationale**: The Phase 1.2.9AB architectural refinement plan completes the storage abstractions, introducing the Storage Provider Orchestration Layer (`StorageProviderRegistry`, `StorageResolver`, `StorageCapabilities`, `StorageProviderConfig`, `StorageHealthReport`). Together with `BaseArtifactStorage`, `ArtifactReference`, `ArtifactTransaction`, canonical URIs, DAG lineage, and SQLite indexing, the design provides complete storage independence, zero breaking changes to existing REST endpoints or pipeline contracts, and total readiness for Phase 1.2.9B implementation.
+- **Rationale**: The Phase 1.2.9B architectural refinement decomposes the system into isolated, single-responsibility components (`BaseArtifactRegistry`, `ManifestBuilder`, `ArtifactLocator`, etc.). This enforces strict boundaries, prevents `ArtifactManager` from becoming a monolithic god object, and establishes robust verification, statistics, and retention subsystems. We are fully ready to proceed with implementation.
