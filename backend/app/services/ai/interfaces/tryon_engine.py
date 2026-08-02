@@ -27,3 +27,7 @@ class BaseTryOnEngine(ABC):
     ) -> RawTryOnOutput:
         """Executes virtual try-on inference using ConditioningBundle."""
         pass
+
+    async def warmup(self) -> None:
+        """Optional warm-up hook preloading models or executing initialization pass."""
+        pass

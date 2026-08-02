@@ -1,6 +1,6 @@
 import hashlib
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from app.services.ai.engines.common.exceptions import WeightMissingError
 from app.utils.logger import logger
@@ -13,6 +13,9 @@ class ModelWeightManager:
         self,
         model_dir: str = "data/models/vton/idm_vton",
         required_files: Optional[List[str]] = None,
+        model_revision: str = "main",
+        source_repository: str = "yisol/IDM-VTON",
+        source_provider: str = "huggingface",
     ) -> None:
         self.model_dir = Path(model_dir)
         self.required_files = required_files or [
@@ -23,6 +26,10 @@ class ModelWeightManager:
             "text_encoder/model.safetensors",
             "vae/diffusion_pytorch_model.safetensors",
         ]
+        self.model_revision = model_revision
+        self.source_repository = source_repository
+        self.source_provider = source_provider
+        self.checkpoint_hash: Optional[str] = None
 
     def locate(self) -> Path:
         """Returns resolved Path to the local model directory."""
@@ -59,6 +66,17 @@ class ModelWeightManager:
         logger.info(f"ModelWeightManager: Verified model weights in '{self.model_dir}'")
         return True
 
+    def get_revision_metadata(self) -> Dict[str, Any]:
+        """Exposes model revision metadata tracking information."""
+        is_valid = self.verify()
+        return {
+            "model_revision": self.model_revision,
+            "source_repository": self.source_repository,
+            "source_provider": self.source_provider,
+            "checkpoint_hash": self.checkpoint_hash or "uncomputed",
+            "verification_status": "verified" if is_valid else "unverified",
+        }
+
     def verify_checksums(self, expected_checksums: Dict[str, str]) -> Dict[str, bool]:
         """Verifies SHA-256 checksums for specified relative model files."""
         results: Dict[str, bool] = {}
@@ -73,7 +91,11 @@ class ModelWeightManager:
                 with open(full_path, "rb") as f:
                     while chunk := f.read(65536):
                         sha256.update(chunk)
-                results[rel_path] = sha256.hexdigest().lower() == expected_hash.lower()
+                computed = sha256.hexdigest().lower()
+                is_match = computed == expected_hash.lower()
+                results[rel_path] = is_match
+                if is_match and not self.checkpoint_hash:
+                    self.checkpoint_hash = computed[:12]
             except Exception as exc:
                 logger.error(
                     f"ModelWeightManager: Checksum error for '{rel_path}': {exc}"
