@@ -1,7 +1,7 @@
-# Phase 1.2.9AA: Artifact Lifecycle Architecture Refinement
+# Phase 1.2.9AB: Storage Provider Architecture Refinement
 
 **Project:** Virtual Wear Simulation — Backend  
-**Phase:** 1.2.9AA — Artifact Lifecycle Architecture Refinement  
+**Phase:** 1.2.9AB — Storage Provider Architecture Refinement  
 **Status:** Architecture Refinement Specification (No Production Code Modified)  
 **Author:** AI Engineering & Architecture Team  
 
@@ -9,9 +9,9 @@
 
 ## Executive Summary
 
-This document extends and refines the technical architecture for the **Artifact Lifecycle Management System** (Phase 1.2.9AA). Following the initial research in Phase 1.2.9A, this refinement phase establishes formal specifications for Content-Addressable Storage (CAS), canonical Artifact URIs, directed acyclic graph (DAG) dependency lineage, transactional staging, immutable artifact policies, extensible capability models, and refined storage driver interfaces (`BaseArtifactStorage`).
+This document extends and refines the technical architecture for the **Artifact Lifecycle Management System** (Phase 1.2.9AB). Following the refinements in Phase 1.2.9AA, this phase establishes formal specifications for a **provider-agnostic storage management layer**, enabling seamless orchestration across diverse storage backends via `StorageProviderRegistry`, `StorageResolver`, and `StorageCapabilities`.
 
-These architecture refinements ensure that Phase 1.2.9B implementation will be fully scalable across multi-node Kubernetes clusters, cloud object storage (AWS S3, Google Cloud Storage, Azure Blob, MinIO), and distributed AI microservices without requiring changes to pipeline controllers or REST APIs.
+These architecture refinements ensure that Phase 1.2.9B implementation will seamlessly decouple pipeline execution from physical storage topologies, allowing zero-downtime migrations between local disk, Kubernetes PVCs, and cloud object storage (AWS S3, Google Cloud Storage, Azure Blob, MinIO).
 
 ---
 
@@ -310,7 +310,107 @@ class BaseArtifactStorage(ABC):
 
 ---
 
-## 10. Artifact Index Architecture
+## 10. Storage Provider Orchestration Layer
+
+To seamlessly support multiple storage backends (Local, S3, GCS, Azure Blob, MinIO) simultaneously or enable migration between them, the architecture introduces a **Provider-Agnostic Storage Management Layer**.
+
+### 10.1 StorageCapabilities
+Defines the operational limits and supported features of a specific storage provider.
+
+```python
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List
+
+class StorageCapabilities(BaseModel):
+    """Defines what a storage provider can and cannot do."""
+    
+    supports_multipart_upload: bool = Field(default=False)
+    supports_presigned_urls: bool = Field(default=False)
+    supports_streaming: bool = Field(default=True)
+    supports_versioning: bool = Field(default=False)
+    max_file_size_bytes: int = Field(default=1024 * 1024 * 1024 * 50) # 50 GB default
+    provider_name: str = Field(..., description="e.g., local, s3, gcs")
+    is_cloud_native: bool = Field(default=False)
+```
+
+### 10.2 StorageProviderConfig
+Configuration required to initialize and authenticate a storage provider.
+
+```python
+class StorageProviderConfig(BaseModel):
+    """Configuration for initializing a storage provider."""
+    
+    provider_id: str = Field(..., description="Unique ID for this provider instance")
+    provider_type: str = Field(..., description="local, s3, gcs, azure")
+    is_default: bool = Field(default=False)
+    base_path: str = Field(..., description="Base directory or bucket name")
+    credentials_secret_ref: Optional[str] = Field(default=None, description="Reference to secret manager for credentials")
+    region: Optional[str] = Field(default=None)
+    endpoint_url: Optional[str] = Field(default=None, description="Custom endpoint for MinIO/S3 compatible APIs")
+    options: Dict[str, Any] = Field(default_factory=dict)
+```
+
+### 10.3 StorageProviderRegistry
+A centralized thread-safe registry that maintains initialized storage provider instances.
+
+```python
+class StorageProviderRegistry:
+    """Manages active storage provider instances."""
+    
+    def register_provider(self, config: StorageProviderConfig, provider: BaseArtifactStorage) -> None:
+        """Registers a configured storage provider."""
+        pass
+        
+    def get_provider(self, provider_id: str) -> BaseArtifactStorage:
+        """Retrieves a provider by its unique ID."""
+        pass
+        
+    def get_default_provider(self) -> BaseArtifactStorage:
+        """Retrieves the default configured provider."""
+        pass
+        
+    def list_providers(self) -> List[str]:
+        """Returns a list of all registered provider IDs."""
+        pass
+```
+
+### 10.4 StorageResolver
+Responsible for parsing `artifact://` URIs and delegating operations to the correct registered storage provider.
+
+```python
+class StorageResolver:
+    """Resolves URIs and delegates to the appropriate StorageProvider."""
+    
+    def __init__(self, registry: StorageProviderRegistry):
+        self.registry = registry
+
+    def resolve_read(self, artifact_ref: 'ArtifactReference') -> BaseArtifactStorage:
+        """Determines the correct provider to read the given artifact."""
+        pass
+        
+    def resolve_write(self, category: str, options: Dict[str, Any] = None) -> BaseArtifactStorage:
+        """Determines the best provider to write a new artifact based on category/rules."""
+        pass
+```
+
+### 10.5 StorageHealthReport
+Provides diagnostic health checks for active storage providers (e.g., disk space, bucket accessibility, latency).
+
+```python
+class StorageHealthReport(BaseModel):
+    """Health check output for a storage provider."""
+    
+    provider_id: str
+    is_healthy: bool
+    latency_ms: float
+    free_space_bytes: Optional[int] = None
+    error_message: Optional[str] = None
+    last_checked_utc: str
+```
+
+---
+
+## 11. Artifact Index Architecture
 
 To support fast querying, metadata lookups, and orphan file detection across millions of artifacts, we evaluated 4 indexing architectures:
 
@@ -329,7 +429,7 @@ To support fast querying, metadata lookups, and orphan file detection across mil
 
 ---
 
-## 11. Manifest V2 Evolution & Portable Export Bundles
+## 12. Manifest V2 Evolution & Portable Export Bundles
 
 ### Manifest V2 Schema Extensions
 Manifest V2 incorporates full DAG dependency lineage, checksum manifests, and capability metadata:
@@ -393,7 +493,7 @@ job_20260802_a81f9c3d_bundle/
 
 ---
 
-## 12. Cloud Storage Migration Readiness Matrix
+## 13. Cloud Storage Migration Readiness Matrix
 
 The abstract driver architecture ensures seamless transition to cloud object storage providers:
 
@@ -407,7 +507,7 @@ The abstract driver architecture ensures seamless transition to cloud object sto
 
 ---
 
-## 13. Complete System Architecture Diagram
+## 14. Complete System Architecture Diagram
 
 ```text
                     ┌────────────────────────────────────────┐
@@ -417,6 +517,16 @@ The abstract driver architecture ensures seamless transition to cloud object sto
                                         ▼
                     ┌────────────────────────────────────────┐
                     │           ArtifactManager              │
+                    └───────────────────┬────────────────────┘
+                                        │
+                    ┌───────────────────▼────────────────────┐
+                    │            StorageResolver             │
+                    │   (Resolves artifact:// URIs to ops)   │
+                    └───────────────────┬────────────────────┘
+                                        │
+                    ┌───────────────────▼────────────────────┐
+                    │         StorageProviderRegistry        │
+                    │  (Holds Local, S3, GCS, Azure drivers) │
                     └───────────────────┬────────────────────┘
                                         │
              ┌──────────────────────────┼──────────────────────────┐
@@ -435,27 +545,29 @@ The abstract driver architecture ensures seamless transition to cloud object sto
 
 ---
 
-## 14. Phase 1.2.9B Implementation Roadmap
+## 15. Phase 1.2.9B Implementation Roadmap
 
 1. **Step 1 — Create Core Schemas (`app/schemas/artifact.py`)**:
    - Define `ArtifactReference`, `ArtifactCategory`, `ArtifactCapability`, `ArtifactProvenance`, `ArtifactMetadata`, `ArtifactManifestV2`.
 2. **Step 2 — Implement Storage Abstraction (`app/services/storage/`)**:
    - Implement `BaseArtifactStorage` and `LocalArtifactStorage` with `artifact://` URI resolution.
-3. **Step 3 — Implement Atomic Staging (`app/services/storage/transaction.py`)**:
+3. **Step 3 — Implement Storage Orchestration (`app/services/storage/provider.py`)**:
+   - Implement `StorageCapabilities`, `StorageProviderConfig`, `StorageProviderRegistry`, and `StorageResolver`.
+4. **Step 4 — Implement Atomic Staging (`app/services/storage/transaction.py`)**:
    - Implement `ArtifactTransaction` manager for atomic stage staging and rollbacks.
-4. **Step 4 — Implement Registry (`app/services/artifacts/registry.py`)**:
+5. **Step 5 — Implement Registry (`app/services/artifacts/registry.py`)**:
    - Implement `BaseArtifactRegistry` and `SQLiteArtifactRegistry` (or `MemoryArtifactRegistry` fallback).
-5. **Step 5 — Implement Artifact Manager (`app/services/artifacts/manager.py`)**:
+6. **Step 6 — Implement Artifact Manager (`app/services/artifacts/manager.py`)**:
    - Implement `ArtifactManager` orchestrating storage, registry, checksum calculations, and DAG manifest generation.
-6. **Step 6 — Pipeline Integration & Cleanup Service Upgrade**:
+7. **Step 7 — Pipeline Integration & Cleanup Service Upgrade**:
    - Wire `ArtifactManager` into `VirtualWearPipeline` stages and upgrade `JobCleanupService`.
-7. **Step 7 — Unit Testing & Verification**:
+8. **Step 8 — Unit Testing & Verification**:
    - Add test suite in `tests/test_artifact_manager.py`.
 
 ---
 
-## 15. GO / NO-GO Recommendation
+## 16. GO / NO-GO Recommendation
 
 ### Recommendation: **GO FOR PHASE 1.2.9B IMPLEMENTATION**
 
-- **Rationale**: The Phase 1.2.9AA architectural refinement plan has established all necessary abstractions (`BaseArtifactStorage`, `ArtifactReference`, `ArtifactTransaction`, `artifact://` URI specification, DAG lineage, and SQLite indexing). The design provides complete storage independence, zero breaking changes to existing REST endpoints or pipeline contracts, and total readiness for Phase 1.2.9B implementation.
+- **Rationale**: The Phase 1.2.9AB architectural refinement plan completes the storage abstractions, introducing the Storage Provider Orchestration Layer (`StorageProviderRegistry`, `StorageResolver`, `StorageCapabilities`, `StorageProviderConfig`, `StorageHealthReport`). Together with `BaseArtifactStorage`, `ArtifactReference`, `ArtifactTransaction`, canonical URIs, DAG lineage, and SQLite indexing, the design provides complete storage independence, zero breaking changes to existing REST endpoints or pipeline contracts, and total readiness for Phase 1.2.9B implementation.
