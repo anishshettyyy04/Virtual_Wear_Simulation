@@ -15,6 +15,7 @@ Production-grade, modular **FastAPI** backend architecture for the **AI-Powered 
 - **Model-Agnostic AI Pipeline Architecture (Phase 1.2.1)**: Internal service-layer abstraction for virtual try-on processing with concurrent stage execution.
 - **Real Image Preprocessing Service (Phase 1.2.2)**: Production Pillow-based image normalization (`ImagePreprocessor`) featuring EXIF transpose, RGBA transparency compositing onto white, proportional `FIT_WITHIN` resizing, and transaction-like atomic commits.
 - **Background Jobs & Progress System (Phase 1.2.8)**: Abstract job queue (`BaseJobQueue`), concurrency-safe registry (`BaseJobRegistry`), worker state machine (`WorkerState`), immutable REST serialization (`JobSnapshot`), centralized state machine (`JobLifecycle`), and registration-driven cleanup (`JobCleanupService`).
+- **Artifact Storage & Lifecycle (Phase 1.2.9B)**: Complete abstraction over Content-Addressable Storage (CAS) featuring dependency injection (`BaseArtifactStorage`, `ArtifactLocator`), transaction context managers, concurrent CAS write locking, artifact versioning, and strict isolation of concerns (`ArtifactMetadataStore`, `ManifestBuilder`, `ArtifactVerifier`, `RetentionManager`, `StorageRecoveryService`).
 - **Comprehensive Test Suite**: Pytest test cases covering health status, CORS headers, Request IDs, error handlers, AI schemas, interfaces, stage ordering, pipeline concurrency, image preprocessing unit tests, job subsystem tests, and pipeline integration tests.
 
 

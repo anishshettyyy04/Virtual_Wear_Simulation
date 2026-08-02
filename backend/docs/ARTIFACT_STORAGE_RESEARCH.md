@@ -610,7 +610,31 @@ The abstract driver architecture ensures seamless transition to cloud object sto
 
 ---
 
-## 17. Phase 1.2.9B Implementation Roadmap
+## 17. Final Architectural Refinements (Mandatory Before Implementation)
+
+To future-proof the storage subsystem while maintaining 100% backward compatibility, the following 17 refinements are enforced during implementation:
+
+1. **`BaseArtifactStorage` as the Only Storage Interface**: No pipeline component may access the filesystem directly; all operations must use async `BaseArtifactStorage` methods.
+2. **Decouple Artifact Identity from Physical Storage**: Identity must be tracked via `artifact_id`, `sha256`, `storage_provider`, and `artifact_uri`.
+3. **Artifact Versioning**: Metadata includes `version` and `parent_artifact_id`. Artifacts are immutable; modifications create new versions.
+4. **Reference Counting**: Registry records maintain a `reference_count` for future CAS cleanup.
+5. **Fully Async Storage API**: Avoids rewrites when migrating to cloud object storage.
+6. **Concurrent CAS Write Protection**: `asyncio.Lock` prevents duplicate simultaneous writes for the same checksum.
+7. **Manifest Versioning**: Manifests include `manifest_version`, `schema_version`, and `pipeline_version`.
+8. **Artifact Lifecycle Events**: Internal events (`CREATED`, `REGISTERED`, `COMMITTED`, `VERIFIED`, etc.) emitted on state changes.
+9. **Statistics Cache**: `ArtifactStatistics` uses a 30-60s TTL cache for expensive scans, invalidated on mutations.
+10. **Expanded Storage Health Report**: Exposes comprehensive diagnostics without expensive filesystem scans.
+11. **Storage Recovery Service**: Handles startup recovery (rollback staged artifacts, verify manifests, repair inconsistencies).
+12. **Dependency Injection**: `ArtifactManager` is strictly an orchestrator; all dependencies are injected.
+13. **Transaction Context Manager**: `async with ArtifactTransaction(...) as tx:` automates commit/rollback.
+14. **Storage Metrics**: Metrics for save/load/checksum/transaction durations are collected and exposed.
+15. **Provider Registry Completion**: Full implementation of `register`, `unregister`, `get`, `list`, and `default`.
+16. **Pipeline Filesystem Isolation**: No raw `open()`, `Path()`, or `shutil` calls inside pipeline stages.
+17. **Additional Test Coverage**: Coverage for concurrent CAS writes, artifact versioning, transaction recovery, duplicate detection, and DI mocks.
+
+---
+
+## 18. Phase 1.2.9B Implementation Roadmap
 
 1. **Step 1 — Create Core Schemas (`app/schemas/artifact.py`)**:
    - Define `ArtifactReference`, `ArtifactCategory`, `ArtifactCapability`, `ArtifactProvenance`, `ArtifactMetadata`, `ArtifactManifestV2`.
@@ -631,7 +655,7 @@ The abstract driver architecture ensures seamless transition to cloud object sto
 
 ---
 
-## 18. GO / NO-GO Recommendation
+## 19. GO / NO-GO Recommendation
 
 ### Recommendation: **GO FOR PHASE 1.2.9B IMPLEMENTATION**
 
