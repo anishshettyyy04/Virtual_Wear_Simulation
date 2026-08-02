@@ -1,5 +1,11 @@
 export const API_ENDPOINTS = {
   HEALTH: '/health',
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    ME: '/auth/me',
+    LOGOUT: '/auth/logout',
+  },
   SIMULATION: {
     PROCESS: '/simulation/process',
     STATUS: '/simulation/status',
@@ -16,3 +22,4 @@ export const API_ENDPOINTS = {
     PRELOAD: '/ai/preload',
   },
 };
+

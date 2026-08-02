@@ -1,15 +1,30 @@
 import { useRef } from 'react';
-import { NavLink } from 'react-router-dom';
-import { Shirt, Menu, Sparkles, Cpu, Github } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Shirt, Menu, Sparkles, Cpu, Github, LogOut, UserCheck, LogIn } from 'lucide-react';
 import { APP_CONFIG } from '@/constants/appConfig';
+import { useAuth } from '@/hooks/useAuth';
+import { useSimulation } from '@/hooks/useSimulation';
 
 export const Navbar = ({ onOpenMobileMenu, isMobileMenuOpen = false }) => {
   const menuButtonRef = useRef(null);
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout, login } = useAuth();
+  const { resetSimulation } = useSimulation();
 
   const handleOpenMenu = () => {
     if (onOpenMobileMenu) {
       onOpenMobileMenu(menuButtonRef);
     }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    resetSimulation();
+    navigate('/');
+  };
+
+  const handleQuickLogin = async () => {
+    await login({ email: 'demo@virtualwear.ai' });
   };
 
   const navLinks = [
@@ -51,7 +66,10 @@ export const Navbar = ({ onOpenMobileMenu, isMobileMenuOpen = false }) => {
           </NavLink>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800/80" aria-label="Desktop navigation">
+          <nav
+            className="hidden md:flex items-center gap-1 bg-slate-900/80 p-1.5 rounded-full border border-slate-800/80"
+            aria-label="Desktop navigation"
+          >
             {navLinks.map((link) => (
               <NavLink
                 key={link.path}
@@ -69,7 +87,7 @@ export const Navbar = ({ onOpenMobileMenu, isMobileMenuOpen = false }) => {
             ))}
           </nav>
 
-          {/* AI Status & GitHub Placeholder Icon */}
+          {/* AI Status & Auth Controls */}
           <div className="hidden sm:flex items-center gap-3">
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
               <span className="relative flex h-2 w-2">
@@ -80,14 +98,40 @@ export const Navbar = ({ onOpenMobileMenu, isMobileMenuOpen = false }) => {
               <span className="hidden lg:inline">Engine Online</span>
             </div>
 
-            {/* GitHub Repository Icon */}
+            {/* Auth State Button / User Badge */}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 text-xs font-medium">
+                  <UserCheck size={14} className="text-blue-400" />
+                  <span className="max-w-[100px] truncate">{user?.name || 'User'}</span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 border border-slate-800 transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  title="Sign Out"
+                  aria-label="Sign Out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleQuickLogin}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-600/20 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <LogIn size={14} />
+                <span>Log In</span>
+              </button>
+            )}
+
+            {/* GitHub Repository Link */}
             <a
-              href="https://github.com"
+              href="https://github.com/anishshettyyy04/Virtual_Wear_Simulation"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 border border-slate-800 transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="GitHub Repository Placeholder"
-              title="GitHub Repository (Placeholder)"
+              aria-label="GitHub Repository"
+              title="GitHub Repository"
             >
               <Github size={18} />
             </a>
@@ -95,15 +139,23 @@ export const Navbar = ({ onOpenMobileMenu, isMobileMenuOpen = false }) => {
 
           {/* Mobile Menu Toggle Button */}
           <div className="flex md:hidden items-center gap-2">
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 border border-slate-800 transition-colors flex sm:hidden items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-              aria-label="GitHub Repository"
-            >
-              <Github size={18} />
-            </a>
+            {isAuthenticated ? (
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800 border border-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Sign Out"
+                title="Sign Out"
+              >
+                <LogOut size={18} />
+              </button>
+            ) : (
+              <button
+                onClick={handleQuickLogin}
+                className="px-2.5 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                Log In
+              </button>
+            )}
             <button
               ref={menuButtonRef}
               onClick={handleOpenMenu}
@@ -120,3 +172,5 @@ export const Navbar = ({ onOpenMobileMenu, isMobileMenuOpen = false }) => {
     </header>
   );
 };
+
+export default Navbar;

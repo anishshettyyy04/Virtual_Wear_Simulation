@@ -3,17 +3,16 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { AuthProvider, SimulationProvider } from '@/context';
 import { AppRoutes } from '@/routes/AppRoutes';
 
-
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <SimulationProvider>
-          <BrowserRouter>
+      <BrowserRouter>
+        <AuthProvider>
+          <SimulationProvider>
             <AppRoutes />
-          </BrowserRouter>
-        </SimulationProvider>
-      </AuthProvider>
+          </SimulationProvider>
+        </AuthProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 }

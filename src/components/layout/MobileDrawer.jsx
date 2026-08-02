@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
-import { X, Shirt, ArrowRight, Cpu } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { X, Shirt, ArrowRight, Cpu, LogOut, UserCheck, LogIn } from 'lucide-react';
 import { APP_CONFIG } from '@/constants/appConfig';
+import { useAuth } from '@/hooks/useAuth';
+import { useSimulation } from '@/hooks/useSimulation';
 
 /**
  * Mobile Navigation Drawer component with complete accessibility features:
@@ -15,6 +17,9 @@ export const MobileDrawer = ({ isOpen, onClose, triggerRef }) => {
   const drawerRef = useRef(null);
   const closeButtonRef = useRef(null);
   const previousActiveElementRef = useRef(null);
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout, login } = useAuth();
+  const { resetSimulation } = useSimulation();
 
   useEffect(() => {
     if (isOpen) {
@@ -78,6 +83,18 @@ export const MobileDrawer = ({ isOpen, onClose, triggerRef }) => {
     }
   }, [isOpen, onClose, triggerRef]);
 
+  const handleLogout = async () => {
+    onClose();
+    await logout();
+    resetSimulation();
+    navigate('/');
+  };
+
+  const handleQuickLogin = async () => {
+    onClose();
+    await login({ email: 'demo@virtualwear.ai' });
+  };
+
   if (!isOpen) return null;
 
   const navLinks = [
@@ -126,6 +143,44 @@ export const MobileDrawer = ({ isOpen, onClose, triggerRef }) => {
             </button>
           </div>
 
+          {/* User Account / Auth Section */}
+          <div className="mb-6 p-3 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+            {isAuthenticated ? (
+              <>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+                    <UserCheck size={16} />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold text-white truncate max-w-[140px]">
+                      {user?.name || 'User'}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Authenticated</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  aria-label="Log Out"
+                  title="Log Out"
+                >
+                  <LogOut size={16} />
+                </button>
+              </>
+            ) : (
+              <div className="w-full flex items-center justify-between">
+                <span className="text-xs text-slate-400">Guest User</span>
+                <button
+                  onClick={handleQuickLogin}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors"
+                >
+                  <LogIn size={14} />
+                  <span>Log In</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           {/* Navigation Items */}
           <nav className="flex flex-col gap-2" aria-label="Mobile menu navigation">
             {navLinks.map((link) => (
@@ -162,3 +217,5 @@ export const MobileDrawer = ({ isOpen, onClose, triggerRef }) => {
     </div>
   );
 };
+
+export default MobileDrawer;
