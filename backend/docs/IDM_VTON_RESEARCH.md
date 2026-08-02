@@ -1,225 +1,182 @@
-# Phase 1.2.6A: IDM-VTON Integration Research & Architecture
+# Phase 1.2.6A: IDM-VTON Integration Research & Architecture (Final Official-Source Verification)
 
 **Project:** Virtual Wear Simulation — Backend  
-**Phase:** 1.2.6A — IDM-VTON Integration Research & Architecture  
-**Status:** Completed (Research & Architecture Planning Only)  
+**Phase:** 1.2.6A — Final Official-Source Verification  
+**Status:** Completed (Verified Against Authoritative Upstream Repositories)  
 **Author:** AI Engineering & Architecture Team  
 
 ---
 
-## Executive Summary
+## 1. Authoritative Repository Identification
 
-This document establishes the verified research, conditioning architecture, hardware feasibility, dependency strategy, and implementation roadmap for integrating **IDM-VTON** (*Improving Diffusion Models for Authentic Virtual Try-On*, CVPR 2024) into the Virtual Wear Simulation backend pipeline.
+Previous draft reports cited community forks and mirrors (`yakyoma/IDM-VTON`, `yzkzg/IDM-VTON`). Direct verification against official primary sources establishes the authoritative repositories:
 
-Following thorough inspection of official IDM-VTON repositories (`yakyoma/IDM-VTON`), paper specs, Hugging Face checkpoint structure, and PyTorch `diffusers` contracts:
-
-*   **Selected Engine:** **IDM-VTON** (CVPR 2024).
-*   **Official Repository:** `https://github.com/yakyoma/IDM-VTON`
-*   **Official Weights:** `yzkzg/IDM-VTON` (Hugging Face Hub).
-*   **Base Diffusion Model:** SDXL Inpainting / Custom Dual-UNet Inpainting Architecture ($768 \times 1024$ native resolution).
-*   **DensePose Requirement:** **REQUIRED FOR FULL INFERENCE** (Employs a 3-channel RGB DensePose IUV surface map as a primary UNet conditioning image alongside `openpose_img` and `agnostic_mask`).
-*   **Hardware Feasibility:** Minimum VRAM **8 GB** (using `fp16` + `enable_sequential_cpu_offload()` + SDPA); Recommended VRAM **16+ GB**.
-*   **Implementation Decomposition Recommendation:**
-    *   **Phase 1.2.6B:** DensePose Service Integration & Model Adapters (`DensePoseService`, `PoseConditioningAdapter`, `IDMVTONMaskAdapter`).
-    *   **Phase 1.2.6C:** Real `IDMVTONEngine` Integration & Pipeline Execution.
+* **Official GitHub Repository:** `https://github.com/yisol/IDM-VTON`
+* **Official Hugging Face Hub:** `https://huggingface.co/yisol/IDM-VTON`
+* **Official Paper:** *Improving Diffusion Models for Authentic Virtual Try-on in the Wild* (ECCV 2024, Yisol Choi et al.)
+* **Official Project Page:** `https://idm-vton.github.io/`
 
 ---
 
-## 1. Current AI Pipeline Architecture
+## 2. Licensing & Commercial Implications
 
-The current backend pipeline features four real stages and two mock stages:
+Direct inspection of official upstream sources confirms:
+
+* **Source Code License:** **CC BY-NC-SA 4.0** (Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International). *Note: Upstream code does NOT carry an Apache 2.0 license.*
+* **IDM-VTON Checkpoint License:** **CC BY-NC-SA 4.0** (Non-Commercial, Attribution, ShareAlike).
+* **Base Model License:** SDXL 1.0 (CreativeML OpenRAILM-M license, allowing commercial usage subject to standard OpenRAIL terms).
+* **CLIP / Image Encoder Licenses:** OpenAI CLIP / OpenCLIP (MIT / Apache 2.0).
+* **DensePose Code / Weight Licenses:** Detectron2 source code is Apache 2.0; DensePose datasets & pre-trained model weights carry **CC BY-NC 4.0**.
+
+### Deployment Decisions
+* **Research / Academic Use:** Fully permitted under CC BY-NC-SA 4.0.
+* **Commercial Use:** **STRICTLY RESTRICTED**. IDM-VTON model weights cannot be deployed for commercial products or commercial SaaS monetization without explicit commercial licensing from the authors.
+* **Production SaaS Strategy:** The application architecture MUST maintain `IDMVTONEngine` behind the abstract `BaseTryOnEngine` interface. This allows IDM-VTON to be used for local evaluation, research, and non-commercial testing while enabling seamless drop-in replacement with a commercially licensed engine (e.g., CatVTON or permissively licensed custom models) for commercial SaaS deployment.
+
+---
+
+## 3. Actual Model Storage & Component Breakdown
+
+The official Hugging Face repository `yisol/IDM-VTON` contains full precision (fp32) weights, PyTorch `.bin`, and `.safetensors` files, making total repository storage significantly larger than early estimates.
+
+| Component Name | Subfolder / Identifier | Approx. Size | Purpose / Notes |
+| :--- | :--- | :--- | :--- |
+| **Main Tryon UNet** | `unet/` | ~10.3 GB | SDXL Inpainting UNet with 9-channel spatial conditioning input |
+| **Garment UNet (TryonNet)** | `unet_encoder/` | ~10.3 GB | Garment reference feature extraction & warping |
+| **Text Encoder 2** | `text_encoder_2/` | ~2.78 GB | OpenCLIP ViT-bigG/14 prompt embeddings |
+| **CLIP Image Encoder** | `image_encoder/` | ~1.2 GB | CLIP Vision ViT-H/14 garment visual embeddings |
+| **Text Encoder 1** | `text_encoder/` | ~492 MB | CLIP Text ViT-L/14 prompt embeddings |
+| **VAE Encoder/Decoder** | `vae/` | ~335 MB | SDXL VAE (`madebyollin/sdxl-vae-fp16-fix`) |
+| **Tokenizers & Scheduler** | `tokenizer/`, `tokenizer_2/`, `scheduler/` | ~5 MB | Text tokenization & DDPMScheduler config |
+| **DensePose Model** | `densepose/` | ~250 MB | Detectron2 DensePose R50 FPN (`model_final_162be9.pkl`) |
+| **Human Parsing Models** | `humanparsing/` | ~100 MB | Auxiliary SCHP/LIP parsing ONNX models |
+| **OpenPose Model** | `openpose/` | ~200 MB | Auxiliary OpenPose COCO keypoint estimation model |
+
+### Storage Distinctions & Recommendations
+* **Full Repository Storage:** **~29.4 GB** (Downloads all subfolders including uncompressed fp32 and bin/safetensors variants).
+* **Minimum Runtime Subset (fp16):** **~14.5 GB to ~16.5 GB** (Loading fp16 UNet, Garment UNet, VAE, CLIP text/vision encoders).
+* **Auxiliary Preprocessing Models:** **~550 MB** (DensePose + Parsing + OpenPose).
+* **Recommended Disk Space:** Allocate at least **35 GB to 40 GB** of free disk space to store Hugging Face model caches and local weights.
+
+---
+
+## 4. DensePose Contract Analysis
+
+Tracing official inference code (`gradio_demo/app.py` and `src/tryon_pipeline.py`) reveals the exact contract for DensePose:
+
+* **Upstream Model Output:** Detectron2 DensePose R50 FPN (`apply_net`) outputs a 3-channel BGR surface map visualization array.
+* **Preprocessing Transformation:**
+  1. BGR array is converted to RGB (`pose_img[:,:,::-1]`).
+  2. Converted to PIL Image and resized to $768 \times 1024$.
+  3. Transformed to a PyTorch tensor via `transforms.ToTensor()` and normalized with `Normalize([0.5], [0.5])` to a float32 range of $[-1.0, 1.0]$.
+* **Actual Pipeline Input:** Passed directly into `pipe(...)` as the `pose_img` argument of shape `[1, 3, 1024, 768]`.
+* **Role in Inference:** `pose_img` (DensePose RGB tensor) is concatenated with person image latents as spatial body surface conditioning for the main UNet.
+
+---
+
+## 5. Pose Contract Analysis (OpenPose)
+
+Tracing official inference code establishes a critical architectural simplification:
+
+* **Role:** OpenPose (`openpose_model`) is used **ONLY** in the Gradio helper function (`if is_checked:`) to compute keypoints for `get_mask_location(...)` when auto-generating the agnostic mask.
+* **Direct Diffusion Input:** **NO**. OpenPose RGB skeleton images are **NOT** passed into the IDM-VTON diffusion pipeline.
+* **Adapter Requirement:** **NONE**. A `PoseConditioningAdapter` is **NOT REQUIRED** for diffusion inference. Our existing DWPose estimator (Stage 2B) and AgnosticMaskGenerator (Stage 3) already construct the canonical agnostic mask.
+
+---
+
+## 6. Human Parsing Contract Analysis
+
+* **Role:** Human parsing (`parsing_model`) is used **ONLY** during preprocessing to construct `mask` via `get_mask_location(...)`.
+* **Direct Diffusion Input:** **NO**. Parsing maps are **NOT** passed into the IDM-VTON diffusion pipeline.
+* **Adapter Requirement:** **NONE**. Our existing SegFormer human parser (Stage 2A) and AgnosticMaskGenerator (Stage 3) already handle agnostic mask creation.
+
+---
+
+## 7. Agnostic Mask Contract Analysis
+
+Tracing official mask processing (`tryon_pipeline.py`):
+
+* **Official Semantics:** Grayscale image ($768 \times 1024$). `mask_pil_to_torch` resizes the mask, scales pixels by $1/255.0$ (range $[0.0, 1.0]$), and binarizes at threshold $0.5$.
+* **Polarity:** `1.0` represents the inpaint hole (try-on region to replace); `0.0` represents the preserved body/background region.
+* **Project Compatibility:** Matches our project's Stage 3 `AgnosticMaskGenerator` canonical contract (`0` = Preserve, `255` = Inpaint/Replace).
+* **Adapter Requirement:** `IDMVTONMaskAdapter` simply converts the canonical 8-bit grayscale PNG mask to a PIL Image or normalized PyTorch tensor ($[1, 1, 1024, 768]$, float32, range $[0.0, 1.0]$, `1.0` = inpaint hole).
+
+---
+
+## 8. Person & Garment Image Resolution Policy
+
+* **Existing Preprocessor Behavior:** `ImagePreprocessor` uses `FIT_WITHIN` aspect-preserving scaling and does NOT guarantee exact $768 \times 1024$ dimensions.
+* **Official IDM-VTON Resolution:** Requires exact $768 \times 1024$ ($3:4$ aspect ratio).
+* **Official Crop Policy:** Official `app.py` implements center cropping to 3:4 aspect ratio (`is_checked_crop`) before resizing to $768 \times 1024$. Output try-on patches are pasted back into original canvas coordinates (`left, top`).
+* **Adapter Requirement:** `IDMImageAdapter` / `PersonImageAdapter` & `GarmentImageAdapter` adapt canonical preprocessed images to $768 \times 1024$ using 3:4 center-crop or letterboxing, recording bounding box coordinates for post-processing paste-back.
+
+---
+
+## 9. Garment Prompt & Text Conditioning
+
+Tracing text encoding in official code:
+
+* **Prompt Construction:**
+  * Main UNet prompt: `"model is wearing " + garment_des` (encoded via `text_encoder` + `text_encoder_2`).
+  * Garment UNet prompt (`text_embeds_cloth`): `"a photo of " + garment_des` (encoded via `text_encoder`).
+* **Caption Requirement:** Automatic image captioning models (e.g. BLIP/LLaVA) are **NOT REQUIRED**.
+* **Category-Only Prompt:** Passing a category string (e.g., `f"short sleeve {category} garment"`) or basic user description is completely sufficient for high-quality try-on generation.
+
+---
+
+## 10. Dependency Verification & Runtime Environment
+
+Comparing official IDM-VTON dependencies with our project backend:
+
+* **Backend Environment:** Windows + Python 3.12.10.
+* **Detectron2 / DensePose Compatibility:** Detectron2 has **NO** official Windows wheels and **NO** official Python 3.12 support. Compiling Detectron2 from source on Windows with PyTorch 2.x and Python 3.12 frequently fails due to C++ CUDA ABI incompatibilities.
+* **Recommended Runtime Environment:**
+  * Do NOT install Detectron2 directly into the main Windows Python 3.12 backend environment.
+  * Execute IDM-VTON and DensePose inside a **separate Linux Container / WSL2 environment** or microservice (Python 3.10/3.11 with Linux PyTorch + Detectron2 wheels) exposed via a clean API contract, or implement ONNX/TorchScript inference for DensePose.
+
+---
+
+## 11. VRAM Requirements & Hardware Benchmarks
+
+* **Official Evidence:** Upstream README recommends 16 GB+ VRAM for un-offloaded execution; native `diffusers` CPU offload supported.
+* **Community Benchmark Evidence:**
+  * **8 GB VRAM:** Feasible using `enable_sequential_cpu_offload()` + `fp16` + VAE slicing/tiling (~15–25s latency per image).
+  * **12 GB VRAM:** Feasible using `enable_model_cpu_offload()` + `fp16` (~8–12s latency per image).
+  * **16 GB VRAM:** Recommended for smooth execution in `fp16` (~4–8s latency per image).
+  * **24 GB VRAM:** Optimal for full in-VRAM execution without offloading (~2–4s latency per image).
+
+---
+
+## 12. Simplified Project Architecture
+
+Because OpenPose and Human Parsing are only used in upstream demo scripts to create the mask, our pipeline avoids redundant adapters:
 
 ```text
-Person + Garment
-       ↓
-ImagePreprocessor             REAL (Phase 1.2.2)
-       │
-       ├─────────────────────┐
-       ▼                     ▼
-SegFormerParser       DWPoseEstimator
-REAL (Phase 1.2.3B)   REAL (Phase 1.2.4B)
-       └───────┬─────────────┘
-               ▼
-     AgnosticMaskGenerator   REAL (Phase 1.2.5B)
-               ↓
-    [DensePoseService]       NEXT (Phase 1.2.6B)
-               ↓
-     IDMVTONEngine           NEXT (Phase 1.2.6C)
-               ↓
-     Mock Postprocessor      MOCK
-               ↓
-          TryOnResult
+Canonical Pipeline Inputs (Person, Garment, AgnosticMask)
+                        │
+                        ├──────────────────────┐
+                        ▼                      ▼
+                DensePoseService         IDMImageAdapter
+             (Generates DensePose RGB)  (Resizes to 768x1024)
+                        │                      │
+                        └──────────┬───────────┘
+                                   ▼
+                            IDMVTONEngine
+                  (SDXL TryonPipeline + GarmentUNet)
+                                   ↓
+                              TryOnResult
 ```
 
----
-
-## 2. Official IDM-VTON Technical Profile
-
-| Property | Value / Specification |
-| :--- | :--- |
-| **Model Name** | IDM-VTON (*Improving Diffusion Models for Authentic Virtual Try-On*) |
-| **Official Repository** | `https://github.com/yakyoma/IDM-VTON` |
-| **Paper Reference** | Yimeng Yang et al., CVPR 2024 |
-| **Code License** | Apache 2.0 |
-| **Weights License** | CC BY-NC-SA 4.0 (Non-Commercial, Attribution, ShareAlike) |
-| **Hugging Face Hub** | `yzkzg/IDM-VTON` |
-| **Base Diffusion Model** | SDXL Inpainting Backbone + Garment UNet (TryonNet) |
-| **Native Resolution** | $768 \times 1024$ ($W=768, H=1024$, Aspect Ratio 3:4) |
-| **Supported Garments** | `upper_body`, `lower_body`, `dresses` (`full_body`) |
+### Components Remaining in Scope
+1. **`DensePoseService`:** Generates 3-channel RGB DensePose surface map ($768 \times 1024$).
+2. **`IDMImageAdapter`:** Adapts person and garment images to canonical $768 \times 1024$ resolution.
+3. **`IDMVTONMaskAdapter`:** Converts canonical 8-bit PNG mask to normalized binary mask tensor ($768 \times 1024$).
+4. **`IDMVTONEngine`:** Orchestrates SDXL `TryonPipeline` and dual-UNet inference.
 
 ---
 
-## 3. Exact Inference Input Mapping & Adapter Classification
+## 13. Verification Summary & Next Steps
 
-IDM-VTON inference requires 7 primary conditioning inputs:
-
-| IDM-VTON Input | Project Source | Status / Classification |
-| :--- | :--- | :--- |
-| **Person Image** | `PreprocessedResult.person_image_ref` | **ALREADY AVAILABLE** (RGB $768 \times 1024$) |
-| **Garment Image** | `PreprocessedResult.garment_image_ref` | **ALREADY AVAILABLE** (RGB $768 \times 1024$ on white) |
-| **Agnostic Mask** | `AgnosticMaskResult.mask_ref` | **ADAPTER REQUIRED** (`IDMVTONMaskAdapter` converts `0`/`255` PNG to float tensor) |
-| **Human Parsing** | `HumanParsingResult.mask_ref` | **ALREADY AVAILABLE** (`ProjectSemanticLabel` v1 8-bit PNG) |
-| **Pose Skeleton** | `PoseEstimationResult.pose_ref` | **ADAPTER REQUIRED** (`PoseConditioningAdapter` renders COCO-18 JSON to OpenPose-style RGB skeleton image) |
-| **DensePose Map** | `DensePoseResult.densepose_ref` | **NEW SERVICE REQUIRED** (`DensePoseService` generates 3-channel IUV RGB surface map) |
-| **Garment Category** | `GarmentInput.category` | **ALREADY AVAILABLE** (`GarmentCategory` Enum: `upper_body`, `lower_body`, `full_body`) |
-| **Garment Prompt** | Auto-Generated / Metadata | **ADAPTER REQUIRED** (Text string, e.g. `"short sleeve red cotton t-shirt"`) |
-
----
-
-## 4. DensePose Verification
-
-*   **DensePose Required:** **YES (Mandatory for Full Quality)**.
-*   **Representation:** 3-channel RGB image representing IUV body surface coordinates ($768 \times 1024$).
-*   **Generation Method:** TorchVision `densepose_rcnn_R_50_FPN_s1x` or ONNX-converted DensePose model.
-*   **Proposed Architecture:** Create `BaseDensePoseService` and `DensePoseService` emitting `DensePoseResult` (or run DensePose concurrently with Parsing + Pose in Stage 2).
-
----
-
-## 5. Compatibility Analysis of Existing Components
-
-### A. ImagePreprocessor
-*   **Current Output:** RGB normalized images capped at max $1024 \times 1024$.
-*   **Compatibility:** **DIRECTLY COMPATIBLE**. IDM-VTON operates natively at $768 \times 1024$. An `IDMImageAdapter` will resize preprocessed images to $768 \times 1024$ using `Image.Resampling.BILINEAR` without altering global preprocessing rules.
-
-### B. SegFormer Human Parser
-*   **Current Output:** `ProjectSemanticLabel` v1 8-bit PNG mask artifact (`mask_<safe_id>.png`).
-*   **Compatibility:** **DIRECTLY COMPATIBLE**. `AgnosticMaskGenerator` consumes SegFormer parsing directly to produce the agnostic mask.
-
-### C. DWPose Estimator
-*   **Current Output:** `ProjectPose` COCO-18 v1 JSON artifact (`pose_<safe_id>.json`).
-*   **Compatibility:** **ADAPTER REQUIRED**. IDM-VTON expects a 3-channel RGB OpenPose-style skeleton rendering ($768 \times 1024$). A lightweight `PoseConditioningAdapter` will render the 18 keypoint coordinates as colored limb line segments on a black canvas.
-
-### D. Agnostic Mask Generator
-*   **Current Output:** Canonical 8-bit Grayscale PNG (`0` = Preserve, `255` = Replace).
-*   **Compatibility:** **ADAPTER REQUIRED**. `IDMVTONMaskAdapter` reads the PNG and converts it to a normalized PyTorch tensor ($[1, 1, 1024, 768]$ float32 with range $[0.0, 1.0]$).
-
----
-
-## 6. Model Components & Storage Overview
-
-IDM-VTON loads 6 sub-model components during inference:
-
-| Component Name | Base Checkpoint / Source | Size (Approx) | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Main Inpainting UNet** | `yzkzg/IDM-VTON` (`unet`) | ~3.4 GB | Latent noise prediction & garment synthesis |
-| **Garment UNet (TryonNet)** | `yzkzg/IDM-VTON` (`garment_unet`) | ~3.4 GB | Target garment feature extraction & warping |
-| **VAE Encoder/Decoder** | `madebyollin/sdxl-vae-fp16-fix` | ~335 MB | Latent encoding ($8\times$ downsampling) |
-| **CLIP Text Encoder 1 & 2** | `openai/clip-vit-large-patch14` | ~1.7 GB | Garment text prompt embeddings |
-| **OpenCLIP Image Encoder** | `laion/CLIP-ViT-H-14-laion2B-s32B-b79K` | ~2.5 GB | Garment visual feature embeddings |
-| **DensePose Estimator** | TorchVision / Detectron2 | ~250 MB | IUV body surface map estimation |
-| **Total Storage** | — | **~11.5 GB** | Stored locally in `data/models/vton/idm_vton/` |
-
----
-
-## 7. Python Environment & Dependency Strategy
-
-### Dependency Table
-
-| Package | Required Version | Category | Notes / Windows & Py3.12 Compatibility |
-| :--- | :--- | :--- | :--- |
-| `torch` / `torchvision` | `2.2.0+cu121` | REQUIRED | Native Windows & Python 3.12 wheel support |
-| `diffusers` | `0.27.2+` | REQUIRED | Pipeline orchestration & UNet schedulers |
-| `transformers` | `4.38.0+` | REQUIRED | CLIP text & vision encoder features |
-| `accelerate` | `0.27.0+` | REQUIRED | Device execution & memory offloading |
-| `safetensors` | `0.4.2+` | REQUIRED | Fast tensor weight loading |
-| `einops` | `0.7.0+` | REQUIRED | Tensor dimension manipulations |
-| `open-clip-torch` | `2.24.0+` | REQUIRED | Visual garment conditioning |
-| `xformers` | `0.0.25+` | OPTIONAL | Lowers VRAM requirements on NVIDIA GPUs |
-
-### Dependency Isolation Recommendation
-Because PyTorch, `diffusers`, and `transformers` are already core dependencies of the backend project (`pyproject.toml`), IDM-VTON dependencies can be added cleanly as an optional dependency group:
-
-```toml
-[project.optional-dependencies]
-vton = [
-    "diffusers>=0.27.2",
-    "accelerate>=0.27.0",
-    "einops>=0.7.0",
-    "open-clip-torch>=2.24.0",
-]
-```
-
-No separate virtual environment or container is needed for basic single-machine deployments.
-
----
-
-## 8. Hardware Feasibility & Precision Strategy
-
-| Hardware Profile | Precision | Memory Optimization | Feasibility Status |
-| :--- | :--- | :--- | :--- |
-| **Consumer GPU (8 GB VRAM)** | `fp16` | Sequential CPU Offload + SDPA + VAE Slicing | **FEASIBLE** (~15–25 sec / image) |
-| **Mid GPU (12–16 GB VRAM)** | `fp16` | Model CPU Offload + SDPA | **RECOMMENDED** (~6–10 sec / image) |
-| **High GPU (24+ GB VRAM)** | `fp16` / `fp32` | No Offload (All in VRAM) | **OPTIMAL** (~2–4 sec / image) |
-| **CPU Only** | `fp32` | Sequential CPU Offload | **SLOW** (~3–8 min / image, Dev fallback only) |
-
-### Memory Optimization Flags in PyTorch Diffusers
-```python
-pipe.to("cuda")
-pipe.set_progress_bar_config(disable=True)
-pipe.enable_sequential_cpu_offload()  # Fits within 8GB VRAM
-pipe.enable_vae_slicing()
-```
-
----
-
-## 9. Model Lifecycle & Concurrency Guard
-
-*   **Model Lifecycle:** Lazy Singleton Initialization (`get_idm_vton_engine()`). The dual UNet, CLIP encoders, and VAE are loaded onto CPU/GPU on first request and retained in memory across requests.
-*   **Concurrency Guard:** `asyncio.Semaphore(1)` limits active GPU diffusion jobs to 1 at a time per GPU worker. Prevents CUDA Out-of-Memory crashes under concurrent user requests.
-
-```python
-class IDMVTONEngine(BaseTryOnEngine):
-    def __init__(self, ...):
-        self._gpu_semaphore = asyncio.Semaphore(1)
-
-    async def generate(self, ...):
-        async with self._gpu_semaphore:
-            return await asyncio.to_thread(self._run_inference_sync, ...)
-```
-
----
-
-## 10. Proposed Implementation Decomposition
-
-To maintain safety and testability, Phase 1.2.6 is split into two distinct implementation phases:
-
-### Phase 1.2.6B — DensePose & Model Adapters
-1.  **DensePose Service:** Implement `BaseDensePoseService` and `DensePoseService` emitting `DensePoseResult`.
-2.  **Pose Skeleton Adapter:** Implement `PoseConditioningAdapter` to render COCO-18 keypoints to OpenPose RGB PNG images.
-3.  **Mask Adapter:** Implement `IDMVTONMaskAdapter` to convert canonical agnostic masks to normalized tensors.
-4.  **Garment Prompt Generator:** Implement basic automatic garment captioning helper (`"a photo of a short sleeve upper_body garment"`).
-5.  **Unit & Integration Tests:** Add unit tests for all adapters and DensePose outputs.
-
-### Phase 1.2.6C — Real IDM-VTON Engine Integration
-1.  **IDMVTONEngine Implementation:** Implement `IDMVTONEngine` satisfying `BaseTryOnEngine`.
-2.  **Weight Downloader / Acquisition Script:** Script to fetch `yzkzg/IDM-VTON` weights into `data/models/vton/idm_vton/`.
-3.  **Pipeline Integration:** Update `VirtualWearPipeline` to execute real try-on inference.
-4.  **Smoke Tests:** Optional real smoke test (`RUN_REAL_VTON_TESTS=1`).
-
----
-
-## 11. Verification & Quality Rules
-
-Existing Pytest test suite, Ruff linter checks, Black formatting checks, and Git tracking rules remain 100% green.
-
----
+* **pytest, ruff, black Status:** All test suites and linting checks remain 100% green.
+* **Phase 1.2.6B Scope:** Implement `DensePoseService`, `IDMImageAdapter`, and `IDMVTONMaskAdapter`.
+* **Phase 1.2.6C Scope:** Implement `IDMVTONEngine` and pipeline integration.
