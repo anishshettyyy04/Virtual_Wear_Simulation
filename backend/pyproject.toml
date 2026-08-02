@@ -33,6 +33,7 @@ markers = [
     "pose_smoke: mark test as real DWPose smoke test",
     "mask_smoke: mark test as real agnostic mask generator smoke test",
     "vton_smoke: mark test as real IDM-VTON smoke test",
+    "api_smoke: mark test as real API smoke test",
 ]
 
 

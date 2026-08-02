@@ -222,6 +222,9 @@ uvicorn app.main:app --reload
 ```
 
 - **Health Endpoint**: `GET http://localhost:8000/api/v1/health`
+- **AI Health Endpoint**: `GET http://localhost:8000/api/v1/health/ai`
+- **Engine Discovery Endpoint**: `GET http://localhost:8000/api/v1/engines`
+- **Virtual Try-On Endpoint**: `POST http://localhost:8000/api/v1/tryon`
 - **Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
