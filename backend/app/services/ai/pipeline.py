@@ -1,7 +1,7 @@
 import asyncio
 from typing import Any, Dict, Optional
 
-from app.schemas.ai import ConditioningBundle, GarmentInput, PersonInput, TryOnResult
+from app.schemas.ai import GarmentInput, PersonInput, TryOnResult
 from app.services.ai.conditioning.base import BaseConditioningAdapter
 from app.services.ai.exceptions import (
     AgnosticMaskError,
@@ -106,29 +106,11 @@ class VirtualWearPipeline:
                     preprocessed, parsing_result, pose_result, agnostic_mask, garment
                 )
                 raw_output = await self.tryon_engine.generate(conditioning=bundle)
+                bundle_id = bundle.bundle_id
             else:
-                bundle = ConditioningBundle(
-                    bundle_id=f"bundle_{preprocessed.person_processed_id}",
-                    person_image_ref=preprocessed.person_image_ref,
-                    garment_image_ref=preprocessed.garment_image_ref,
-                    agnostic_mask=agnostic_mask,
-                    garment_category=garment.category,
-                    person_dimensions=preprocessed.person_dimensions,
-                    garment_dimensions=preprocessed.garment_dimensions,
-                    available_components=[
-                        "person_image",
-                        "garment_image",
-                        "agnostic_mask",
-                    ],
-                    generator_versions={"segformer": "1.0", "dwpose": "1.0"},
-                )
+                bundle_id = f"bundle_{preprocessed.person_processed_id}"
                 raw_output = await self.tryon_engine.generate(
-                    preprocessed=preprocessed,
-                    parsing=parsing_result,
-                    pose=pose_result,
-                    agnostic_mask=agnostic_mask,
-                    garment=garment,
-                    conditioning=bundle,
+                    preprocessed, parsing_result, pose_result, agnostic_mask, garment
                 )
         except AIPipelineError:
             raise
@@ -158,7 +140,7 @@ class VirtualWearPipeline:
             "segment_categories": parsing_result.segment_categories,
             "agnostic_mask_id": agnostic_mask.mask_id,
             "replace_coverage": agnostic_mask.replace_coverage,
-            "conditioning_bundle_id": bundle.bundle_id,
+            "conditioning_bundle_id": bundle_id,
         }
 
         logger.info("AI Pipeline: Execution completed successfully")
