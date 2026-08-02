@@ -1,38 +1,75 @@
-# Conditioning Layer — AI Pipeline Architecture
+# Phase 1.2.6AA — ConditioningBundle Architecture
 
 **Package:** `app.services.ai.conditioning`  
-**Phase:** Architecture Improvement — Dedicated Conditioning Layer  
-**Status:** Abstract Interfaces & Structural Boundary Defined  
+**Phase:** Phase 1.2.6AA — Engine-Independent ConditioningBundle Architecture  
+**Status:** Canonical Interface & Data Contract Defined  
 
 ---
 
-## 🎯 Purpose & Architectural Isolation
+## 🎯 Canonical Conditioning Philosophy
 
-The **Conditioning Layer** forms a clean architectural boundary between canonical, model-agnostic pipeline artifacts (`PreprocessingResult`, `HumanParsingResult`, `PoseEstimationResult`, `AgnosticMaskResult`) and model-specific neural engine requirements (such as IDM-VTON, CatVTON, or future diffusion backbones).
+The **Conditioning Layer** acts as the explicit architectural boundary between canonical, engine-independent project artifacts (`PreprocessingResult`, `HumanParsingResult`, `PoseEstimationResult`, `AgnosticMaskResult`) and neural try-on engines (`IDMVTONEngine`, `CatVTONEngine`, `StableVITONEngine`, `OOTDiffusionEngine`, `FutureCommercialEngine`).
 
-By isolating model-specific data preparation within this layer, the upstream stages of the `VirtualWearPipeline` remain **100% model-agnostic**. The core pipeline never imports or interacts with model-specific tensor shapes, normalization rules, or model-specific auxiliary services directly.
+Instead of allowing each neural try-on engine to request arbitrary internal project artifacts directly, the Conditioning Layer aggregates canonical resources into a single engine-independent object:
 
----
+```text
+ConditioningBundle
+```
 
-## 🛠️ Layer Responsibilities
-
-The Conditioning Layer is explicitly responsible for:
-
-1. **Person Image Adaptation (`PersonImageAdapter`):** Transforming canonical preprocessed person images to target engine resolutions (e.g. $768 \times 1024$) via $3:4$ aspect cropping or padding.
-2. **Garment Image Adaptation (`GarmentImageAdapter`):** Transforming canonical garment images to target engine resolutions and background specifications.
-3. **Mask Adaptation (`IDMVTONMaskAdapter`):** Converting canonical single-channel 8-bit PNG agnostic masks into model-specific float32 tensor formats ($[1, 1, 1024, 768]$).
-4. **DensePose Generation (`BaseDensePoseService`):** Generating 3-channel RGB body surface map visualizations from person images when required by spatial UNet conditioning models.
-5. **Future Model-Specific Conditioning (`BaseConditioningAdapter`):** Orchestrating multi-modal conditioning packages required by future virtual try-on engines.
+Every neural try-on engine consumes this bundle as its primary input.
 
 ---
 
-## 📐 Abstract Interfaces & Data Contracts
+## 🧠 AI Pipeline Architecture
 
-* `BaseConditioningAdapter`: Abstract orchestrator combining images, masks, and pose conditioning for specific VTON engines.
-* `BaseImageAdapter`: Abstract base class for image resolution and aspect ratio adaptation.
-* `BaseMaskAdapter`: Abstract base class for mask format and tensor conversion.
-* `BaseDensePoseService`: Abstract service interface for DensePose body surface estimation.
-* `DensePoseResult`: Pydantic data model encapsulating DensePose artifact metadata and paths.
+```text
+Person + Garment
+        ↓
+ImagePreprocessor (Stage 1)
+        │
+        ├──────────────────────┐
+        ▼                      ▼
+ SegFormerParser        DWPoseEstimator (Stage 2)
+        └──────────┬───────────┘
+                   ▼
+       AgnosticMaskGenerator (Stage 3)
+                   │
+                   ▼
+           Conditioning Layer
+                   │
+                   ▼
+           ConditioningBundle
+                   │
+                   ▼
+              TryOnEngine (Stage 4)
+                   │
+                   ▼
+             Postprocessor (Stage 5)
+```
+
+---
+
+## 📐 Data Contracts & Engine Boundary
+
+* **Canonical Project Artifacts:** Internal pipeline artifacts produced by Stages 1–3 (`PreprocessingResult`, `HumanParsingResult`, `PoseEstimationResult`, `AgnosticMaskResult`).
+* **ConditioningBundle:** Aggregates person/garment image references, canonical agnostic mask, optional `DensePoseResult`, and standardized lightweight metadata (`schema_version`, `conditioning_version`, `garment_category`, `dimensions`, `generator_versions`).
+* **Engine Boundary:** Try-on engines begin at the `ConditioningBundle` boundary. Engines never import or directly depend on internal parsing/pose models or Diffusers/PyTorch objects.
+
+---
+
+## 🔌 Future Engine Compatibility
+
+Each virtual try-on engine consumes the `ConditioningBundle` and extracts only the components it requires:
+
+| Engine | Consumed Bundle Components | Notes |
+| :--- | :--- | :--- |
+| **IDM-VTON** | `person_image_ref`, `garment_image_ref`, `agnostic_mask`, `densepose` | SDXL dual-UNet with DensePose spatial surface map conditioning |
+| **CatVTON** | `person_image_ref`, `garment_image_ref`, `agnostic_mask` | Lightweight concatenation-based VTON without DensePose |
+| **StableVITON** | `person_image_ref`, `garment_image_ref`, `agnostic_mask`, `pose` | Pose keypoint-conditioned diffusion |
+| **OOTDiffusion** | `person_image_ref`, `garment_image_ref`, `agnostic_mask` | Outfitting fusion try-on |
+| **Future Commercial Engine** | `person_image_ref`, `garment_image_ref`, `metadata` | Permissively licensed SaaS engine |
+
+The overall pipeline flow remain 100% unchanged when swapping or adding try-on engines.
 
 ---
 
@@ -41,21 +78,23 @@ The Conditioning Layer is explicitly responsible for:
 ```text
 services/
     ai/
-        preprocessing/          # Real image normalization (Pillow)
-        parsing/                # Real human parsing (SegFormer)
-        pose/                   # Real pose estimation (DWPose)
-        masking/                # Real agnostic mask generation
+        preprocessing/          # Image normalization (Pillow)
+        parsing/                # Human parsing (SegFormer)
+        pose/                   # Pose estimation (DWPose)
+        masking/                # Agnostic mask generation
 
         conditioning/           # Dedicated Conditioning Layer
-            base.py             # Abstract interfaces & data models
-            adapters/           # Model-specific image & mask adapters
+            base.py             # Base interfaces & ConditioningBundle contract
+            adapters/           # Model-specific adapters
                 person_adapter.py
                 garment_adapter.py
                 mask_adapter.py
-            densepose/          # DensePose body surface estimation
+            densepose/          # DensePose service & result schema
                 service.py
 
-        engines/                # Neural try-on inference engines
+        engines/                # Virtual try-on neural engines
             idm_vton/           # IDM-VTON engine implementation
-            future_engines/     # Alternative/commercial engines
+            catvton/            # CatVTON engine implementation (roadmap)
+            stableviton/        # StableVITON engine implementation (roadmap)
+            ootdiffusion/       # OOTDiffusion engine implementation (roadmap)
 ```

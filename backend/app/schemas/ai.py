@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field
 
@@ -117,6 +117,63 @@ class PoseEstimationResult(BaseModel):
         default=None, json_schema_extra={"example": "33 keypoints aligned"}
     )
     num_keypoints: int = Field(default=33, ge=0)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DensePoseResult(BaseModel):
+    """Contract emitted by DensePose surface map estimation stage."""
+
+    densepose_id: str = Field(..., json_schema_extra={"example": "dp_proc_person_001"})
+    densepose_ref: str = Field(
+        ...,
+        json_schema_extra={
+            "example": "data/processed/densepose/dp_proc_person_001.png"
+        },
+    )
+    height: int = Field(default=1024, gt=0)
+    width: int = Field(default=768, gt=0)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ConditioningBundle(BaseModel):
+    """Engine-independent bundle aggregating preprocessed artifacts."""
+
+    bundle_id: str = Field(..., json_schema_extra={"example": "bundle_proc_person_001"})
+    schema_version: str = Field(default="v1", json_schema_extra={"example": "v1"})
+    conditioning_version: str = Field(
+        default="1.0.0", json_schema_extra={"example": "1.0.0"}
+    )
+    person_image_ref: str = Field(
+        ..., json_schema_extra={"example": "storage://preprocessed/person_001.png"}
+    )
+    garment_image_ref: str = Field(
+        ..., json_schema_extra={"example": "storage://preprocessed/garment_001.png"}
+    )
+    agnostic_mask: AgnosticMaskResult = Field(
+        ..., description="Canonical agnostic mask result"
+    )
+    densepose: Optional[DensePoseResult] = Field(
+        default=None, description="Optional DensePose body surface map result"
+    )
+    garment_category: Union[GarmentCategory, str] = Field(
+        default=GarmentCategory.UPPER_BODY, json_schema_extra={"example": "upper_body"}
+    )
+    person_dimensions: Optional[Union[ImageDimensions, Tuple[int, int]]] = Field(
+        default=None
+    )
+    garment_dimensions: Optional[Union[ImageDimensions, Tuple[int, int]]] = Field(
+        default=None
+    )
+    available_components: List[str] = Field(
+        default_factory=list,
+        json_schema_extra={
+            "example": ["person_image", "garment_image", "agnostic_mask"]
+        },
+    )
+    generator_versions: dict[str, str] = Field(
+        default_factory=dict,
+        json_schema_extra={"example": {"segformer": "1.0", "dwpose": "1.0"}},
+    )
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

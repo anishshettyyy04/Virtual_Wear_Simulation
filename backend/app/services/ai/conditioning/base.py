@@ -1,17 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field
-
-
-class DensePoseResult(BaseModel):
-    """Container for DensePose surface estimation result metadata and artifact path."""
-
-    densepose_id: str
-    densepose_ref: str
-    height: int
-    width: int
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+from app.schemas.ai import (
+    AgnosticMaskResult,
+    ConditioningBundle,
+    DensePoseResult,
+    GarmentInput,
+    HumanParsingResult,
+    PoseEstimationResult,
+    PreprocessingResult,
+)
 
 
 class BaseDensePoseService(ABC):
@@ -42,15 +40,18 @@ class BaseMaskAdapter(ABC):
 
 
 class BaseConditioningAdapter(ABC):
-    """Abstract interface for combining multi-modal conditioning for VTON engines."""
+    """Abstract interface for producing a ConditioningBundle."""
 
     @abstractmethod
     async def prepare(
         self,
-        person_image_ref: str,
-        garment_image_ref: str,
-        agnostic_mask_ref: str,
+        preprocessed: PreprocessingResult,
+        parsing: HumanParsingResult,
+        pose: PoseEstimationResult,
+        agnostic_mask: AgnosticMaskResult,
+        garment: GarmentInput,
+        densepose: Optional[DensePoseResult] = None,
         **kwargs: Any,
-    ) -> Any:
-        """Prepares complete conditioning package required by a specific VTON engine."""
+    ) -> ConditioningBundle:
+        """Prepares canonical ConditioningBundle for try-on engines."""
         raise NotImplementedError

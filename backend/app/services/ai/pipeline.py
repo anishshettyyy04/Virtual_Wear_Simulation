@@ -1,7 +1,8 @@
 import asyncio
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from app.schemas.ai import GarmentInput, PersonInput, TryOnResult
+from app.schemas.ai import ConditioningBundle, GarmentInput, PersonInput, TryOnResult
+from app.services.ai.conditioning.base import BaseConditioningAdapter
 from app.services.ai.exceptions import (
     AgnosticMaskError,
     AIPipelineError,
@@ -32,6 +33,7 @@ class VirtualWearPipeline:
         agnostic_mask_generator: BaseAgnosticMaskGenerator,
         tryon_engine: BaseTryOnEngine,
         postprocessor: BasePostprocessor,
+        conditioning_adapter: Optional[BaseConditioningAdapter] = None,
     ) -> None:
         self.preprocessor = preprocessor
         self.human_parser = human_parser
@@ -39,6 +41,7 @@ class VirtualWearPipeline:
         self.agnostic_mask_generator = agnostic_mask_generator
         self.tryon_engine = tryon_engine
         self.postprocessor = postprocessor
+        self.conditioning_adapter = conditioning_adapter
 
     async def run(self, person: PersonInput, garment: GarmentInput) -> TryOnResult:
         """Executes full try-on pipeline sequentially & concurrently."""
@@ -98,9 +101,35 @@ class VirtualWearPipeline:
         # Stage 4: Virtual Try-On Neural Inference Engine
         logger.info("AI Pipeline: Stage 4 - Virtual Try-On Engine inference started")
         try:
-            raw_output = await self.tryon_engine.generate(
-                preprocessed, parsing_result, pose_result, agnostic_mask, garment
-            )
+            if self.conditioning_adapter is not None:
+                bundle = await self.conditioning_adapter.prepare(
+                    preprocessed, parsing_result, pose_result, agnostic_mask, garment
+                )
+                raw_output = await self.tryon_engine.generate(conditioning=bundle)
+            else:
+                bundle = ConditioningBundle(
+                    bundle_id=f"bundle_{preprocessed.person_processed_id}",
+                    person_image_ref=preprocessed.person_image_ref,
+                    garment_image_ref=preprocessed.garment_image_ref,
+                    agnostic_mask=agnostic_mask,
+                    garment_category=garment.category,
+                    person_dimensions=preprocessed.person_dimensions,
+                    garment_dimensions=preprocessed.garment_dimensions,
+                    available_components=[
+                        "person_image",
+                        "garment_image",
+                        "agnostic_mask",
+                    ],
+                    generator_versions={"segformer": "1.0", "dwpose": "1.0"},
+                )
+                raw_output = await self.tryon_engine.generate(
+                    preprocessed=preprocessed,
+                    parsing=parsing_result,
+                    pose=pose_result,
+                    agnostic_mask=agnostic_mask,
+                    garment=garment,
+                    conditioning=bundle,
+                )
         except AIPipelineError:
             raise
         except Exception as exc:
@@ -129,6 +158,7 @@ class VirtualWearPipeline:
             "segment_categories": parsing_result.segment_categories,
             "agnostic_mask_id": agnostic_mask.mask_id,
             "replace_coverage": agnostic_mask.replace_coverage,
+            "conditioning_bundle_id": bundle.bundle_id,
         }
 
         logger.info("AI Pipeline: Execution completed successfully")

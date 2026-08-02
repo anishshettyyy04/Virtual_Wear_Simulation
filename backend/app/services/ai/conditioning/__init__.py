@@ -1,3 +1,4 @@
+from app.schemas.ai import ConditioningBundle, DensePoseResult
 from app.services.ai.conditioning.adapters import (
     GarmentImageAdapter,
     IDMVTONMaskAdapter,
@@ -8,7 +9,6 @@ from app.services.ai.conditioning.base import (
     BaseDensePoseService,
     BaseImageAdapter,
     BaseMaskAdapter,
-    DensePoseResult,
 )
 from app.services.ai.conditioning.densepose import (
     MockDensePoseService,
@@ -19,6 +19,7 @@ __all__ = [
     "BaseImageAdapter",
     "BaseMaskAdapter",
     "BaseDensePoseService",
+    "ConditioningBundle",
     "DensePoseResult",
     "PersonImageAdapter",
     "GarmentImageAdapter",

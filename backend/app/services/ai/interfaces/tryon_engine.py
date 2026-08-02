@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 from app.schemas.ai import (
     AgnosticMaskResult,
+    ConditioningBundle,
     GarmentInput,
     HumanParsingResult,
     PoseEstimationResult,
@@ -16,11 +18,12 @@ class BaseTryOnEngine(ABC):
     @abstractmethod
     async def generate(
         self,
-        preprocessed: PreprocessingResult,
-        parsing: HumanParsingResult,
-        pose: PoseEstimationResult,
-        agnostic_mask: AgnosticMaskResult,
-        garment: GarmentInput,
+        preprocessed: Optional[PreprocessingResult] = None,
+        parsing: Optional[HumanParsingResult] = None,
+        pose: Optional[PoseEstimationResult] = None,
+        agnostic_mask: Optional[AgnosticMaskResult] = None,
+        garment: Optional[GarmentInput] = None,
+        conditioning: Optional[ConditioningBundle] = None,
     ) -> RawTryOnOutput:
-        """Executes virtual try-on inference combining person, garment, and pose."""
+        """Executes virtual try-on inference using ConditioningBundle."""
         pass
