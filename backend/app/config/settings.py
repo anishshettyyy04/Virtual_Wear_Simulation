@@ -69,6 +69,12 @@ class Settings(BaseSettings):
     # AI Agnostic Mask Generator Configuration (Phase 1.2.5B)
     AI_AGNOSTIC_MASK_OUTPUT_DIR: str = "data/processed/agnostic_masks"
 
+    # AI Conditioning & DensePose Configuration (Phase 1.2.6B)
+    AI_DENSEPOSE_OUTPUT_DIR: str = "data/processed/densepose"
+    AI_CONDITIONING_VERSION: str = "1.0.0"
+    AI_IMAGE_TARGET_WIDTH: int = Field(default=768, gt=0)
+    AI_IMAGE_TARGET_HEIGHT: int = Field(default=1024, gt=0)
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: Union[List[str], str]) -> List[str]:

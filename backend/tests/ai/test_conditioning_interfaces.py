@@ -169,37 +169,38 @@ async def test_pipeline_execution_with_conditioning_bundle() -> None:
     assert result.pipeline_metadata["conditioning_bundle_id"] == "bundle_proc_p123"
 
 
-def test_image_adapter_stubs_raise_not_implemented() -> None:
-    """Verifies image adapter stubs raise NotImplementedError on call."""
+def test_image_adapters_working_execution() -> None:
+    """Verifies image adapters return valid adaptation metadata."""
     person_adapter = PersonImageAdapter()
     garment_adapter = GarmentImageAdapter()
 
     assert isinstance(person_adapter, BaseImageAdapter)
     assert isinstance(garment_adapter, BaseImageAdapter)
 
-    with pytest.raises(NotImplementedError):
-        person_adapter.adapt("test_person.jpg", 768, 1024)
+    p_res = person_adapter.adapt("test_person.jpg", target_resolution=(768, 1024))
+    g_res = garment_adapter.adapt("test_garment.jpg", target_resolution=(768, 1024))
 
-    with pytest.raises(NotImplementedError):
-        garment_adapter.adapt("test_garment.jpg", 768, 1024)
+    assert p_res["target_resolution"] == (768, 1024)
+    assert g_res["target_resolution"] == (768, 1024)
 
 
-def test_mask_adapter_stub_raises_not_implemented() -> None:
-    """Verifies mask adapter stub raises NotImplementedError on call."""
+def test_mask_adapter_working_execution() -> None:
+    """Verifies mask adapter returns valid adaptation metadata."""
     mask_adapter = IDMVTONMaskAdapter()
 
     assert isinstance(mask_adapter, BaseMaskAdapter)
 
-    with pytest.raises(NotImplementedError):
-        mask_adapter.adapt("mask_test.png", 768, 1024)
+    m_res = mask_adapter.adapt("mask_test.png", target_resolution=(768, 1024))
+    assert m_res["target_resolution"] == (768, 1024)
 
 
 @pytest.mark.asyncio
-async def test_mock_densepose_service_raises_not_implemented() -> None:
-    """Verifies mock DensePose service process raises NotImplementedError."""
+async def test_mock_densepose_service_working_execution() -> None:
+    """Verifies MockDensePoseService produces valid DensePoseResult."""
     service = MockDensePoseService()
 
     assert isinstance(service, BaseDensePoseService)
 
-    with pytest.raises(NotImplementedError):
-        await service.process("person_test.jpg")
+    result = await service.process("person_test.jpg")
+    assert isinstance(result, DensePoseResult)
+    assert result.densepose_id.startswith("dp_person_test")

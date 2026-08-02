@@ -1,22 +1,20 @@
-# Phase 1.2.6AA — ConditioningBundle Architecture
+# Phase 1.2.6B — Dedicated Conditioning Layer Architecture
 
 **Package:** `app.services.ai.conditioning`  
-**Phase:** Phase 1.2.6AA — Engine-Independent ConditioningBundle Architecture  
-**Status:** Canonical Interface & Data Contract Defined  
+**Phase:** Phase 1.2.6B — DensePose Service, Model Adapters & Capability Negotiation  
+**Status:** Complete (Engine-Independent Infrastructure & Builder Implemented)  
 
 ---
 
-## 🎯 Canonical Conditioning Philosophy
+## 🎯 Architecture & Stateless Conditioning Philosophy
 
-The **Conditioning Layer** acts as the explicit architectural boundary between canonical, engine-independent project artifacts (`PreprocessingResult`, `HumanParsingResult`, `PoseEstimationResult`, `AgnosticMaskResult`) and neural try-on engines (`IDMVTONEngine`, `CatVTONEngine`, `StableVITONEngine`, `OOTDiffusionEngine`, `FutureCommercialEngine`).
+The **Conditioning Layer** forms a clean architectural boundary between model-agnostic pipeline artifacts (`PreprocessingResult`, `HumanParsingResult`, `PoseEstimationResult`, `AgnosticMaskResult`) and neural try-on engines (`IDMVTONEngine`, `CatVTONEngine`, `StableVITONEngine`, `OOTDiffusionEngine`, `FutureCommercialEngine`).
 
-Instead of allowing each neural try-on engine to request arbitrary internal project artifacts directly, the Conditioning Layer aggregates canonical resources into a single engine-independent object:
-
-```text
-ConditioningBundle
-```
-
-Every neural try-on engine consumes this bundle as its primary input.
+### Key Design Principles:
+1. **Stateless `ConditioningBuilder`:** The builder does not retain transient state or engine instances. It receives canonical artifacts, applies adapters/services conditionally, and returns a compiled `ConditioningBundle`.
+2. **Canonical Adapters:** Adapters perform engine-independent validation and target resolution scaling (`target_resolution: tuple[int, int]`, defaulting to $(768, 1024)$). `CanonicalMaskAdapter` validates binary masks and coverage without introducing PyTorch/Diffusers dependencies. Model-specific tensor conversions (e.g. `IDMVTONMaskAdapter`) wrap canonical adapters in Phase 1.2.6C.
+3. **Rich Capability Negotiation (`EngineCapabilities`):** Engines declare required components (`engine_name`, `engine_version`, `requires_densepose`, `requires_person_adapter`, `requires_garment_adapter`, `requires_mask_adapter`, `target_resolution`). The builder prepares only the required components.
+4. **Self-Identifying DensePose Service:** Placeholder service emits explicit metadata (`"implementation": "placeholder", "provider": "mock_densepose", "schema_version": "v1"`) allowing seamless replacement with real ONNX/Detectron2 services in production.
 
 ---
 
@@ -36,6 +34,7 @@ ImagePreprocessor (Stage 1)
                    │
                    ▼
            Conditioning Layer
+          (ConditioningBuilder + EngineCapabilities)
                    │
                    ▼
            ConditioningBundle
@@ -49,31 +48,33 @@ ImagePreprocessor (Stage 1)
 
 ---
 
-## 📐 Data Contracts & Engine Boundary
+## 🔌 Capability Negotiation & Engine Compatibility
 
-* **Canonical Project Artifacts:** Internal pipeline artifacts produced by Stages 1–3 (`PreprocessingResult`, `HumanParsingResult`, `PoseEstimationResult`, `AgnosticMaskResult`).
-* **ConditioningBundle:** Aggregates person/garment image references, canonical agnostic mask, optional `DensePoseResult`, and standardized lightweight metadata (`schema_version`, `conditioning_version`, `garment_category`, `dimensions`, `generator_versions`).
-* **Engine Boundary:** Try-on engines begin at the `ConditioningBundle` boundary. Engines never import or directly depend on internal parsing/pose models or Diffusers/PyTorch objects.
+```python
+# IDM-VTON Engine Capability Declaration
+idm_vton_caps = EngineCapabilities(
+    engine_name="idm_vton",
+    engine_version="1.0.0",
+    requires_densepose=True,
+    requires_person_adapter=True,
+    requires_garment_adapter=True,
+    requires_mask_adapter=True,
+    target_resolution=(768, 1024),
+)
+
+# CatVTON Engine Capability Declaration
+catvton_caps = EngineCapabilities(
+    engine_name="cat_vton",
+    engine_version="1.0.0",
+    requires_densepose=False,
+    requires_mask_adapter=True,
+    target_resolution=(768, 1024),
+)
+```
 
 ---
 
-## 🔌 Future Engine Compatibility
-
-Each virtual try-on engine consumes the `ConditioningBundle` and extracts only the components it requires:
-
-| Engine | Consumed Bundle Components | Notes |
-| :--- | :--- | :--- |
-| **IDM-VTON** | `person_image_ref`, `garment_image_ref`, `agnostic_mask`, `densepose` | SDXL dual-UNet with DensePose spatial surface map conditioning |
-| **CatVTON** | `person_image_ref`, `garment_image_ref`, `agnostic_mask` | Lightweight concatenation-based VTON without DensePose |
-| **StableVITON** | `person_image_ref`, `garment_image_ref`, `agnostic_mask`, `pose` | Pose keypoint-conditioned diffusion |
-| **OOTDiffusion** | `person_image_ref`, `garment_image_ref`, `agnostic_mask` | Outfitting fusion try-on |
-| **Future Commercial Engine** | `person_image_ref`, `garment_image_ref`, `metadata` | Permissively licensed SaaS engine |
-
-The overall pipeline flow remain 100% unchanged when swapping or adding try-on engines.
-
----
-
-## 📁 Repository Structure Roadmap
+## 📁 Repository Structure Layout
 
 ```text
 services/
@@ -84,17 +85,13 @@ services/
         masking/                # Agnostic mask generation
 
         conditioning/           # Dedicated Conditioning Layer
-            base.py             # Base interfaces & ConditioningBundle contract
-            adapters/           # Model-specific adapters
-                person_adapter.py
-                garment_adapter.py
-                mask_adapter.py
-            densepose/          # DensePose service & result schema
-                service.py
-
-        engines/                # Virtual try-on neural engines
-            idm_vton/           # IDM-VTON engine implementation
-            catvton/            # CatVTON engine implementation (roadmap)
-            stableviton/        # StableVITON engine implementation (roadmap)
-            ootdiffusion/       # OOTDiffusion engine implementation (roadmap)
+            base.py             # Base interfaces & contracts
+            builder.py          # Stateless ConditioningBuilder & EngineCapabilities
+            adapters/           # Model & resolution adapters
+                canonical_mask_adapter.py # Generic CanonicalMaskAdapter
+                garment_image_adapter.py  # GarmentImageAdapter
+                person_image_adapter.py   # PersonImageAdapter
+            densepose/          # DensePose surface map estimation
+                base.py         # BaseDensePoseService interface
+                service.py      # DensePoseService placeholder
 ```
