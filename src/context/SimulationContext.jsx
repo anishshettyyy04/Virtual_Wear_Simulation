@@ -102,8 +102,8 @@ export const SimulationProvider = ({ children }) => {
       }
       return null;
     });
-    setSimulationStatus((prevStatus) => (garmentImage ? 'idle' : 'idle'));
-  }, [releaseTrackedObjectURL, garmentImage]);
+    setSimulationStatus('idle');
+  }, [releaseTrackedObjectURL]);
 
   // Action: Set Garment Image & manage Object URL lifecycle
   const setGarmentImage = useCallback(
