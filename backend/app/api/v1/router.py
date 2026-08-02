@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.routes import engines, health, tryon
+from app.api.v1.routes import engines, health, jobs, tryon
 
 api_router = APIRouter()
 
@@ -8,3 +8,4 @@ api_router = APIRouter()
 api_router.include_router(health.router)
 api_router.include_router(engines.router)
 api_router.include_router(tryon.router)
+api_router.include_router(jobs.router)

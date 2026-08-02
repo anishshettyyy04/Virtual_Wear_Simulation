@@ -75,6 +75,13 @@ class Settings(BaseSettings):
     AI_IMAGE_TARGET_WIDTH: int = Field(default=768, gt=0)
     AI_IMAGE_TARGET_HEIGHT: int = Field(default=1024, gt=0)
 
+    # Background Job & Progress Configuration (Phase 1.2.8)
+    AI_MAX_CONCURRENT_JOBS: int = Field(default=2, gt=0)
+    AI_QUEUE_SIZE: int = Field(default=100, gt=0)
+    AI_JOB_RETENTION_HOURS: float = Field(default=24.0, gt=0.0)
+    AI_CANCELLED_JOB_RETENTION_HOURS: float = Field(default=1.0, gt=0.0)
+    AI_WORKER_POLL_INTERVAL_MS: float = Field(default=100.0, gt=0.0)
+
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, value: Union[List[str], str]) -> List[str]:

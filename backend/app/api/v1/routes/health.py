@@ -3,11 +3,13 @@ from typing import Any, Dict
 from fastapi import APIRouter, Depends, Request
 
 from app.api.dependencies.engines import get_tryon_engine
+from app.api.dependencies.jobs import get_job_manager
 from app.config.settings import settings
 from app.schemas.response import HealthResponse
 from app.services.ai.engines import DeviceManager, ModelRegistry
 from app.services.ai.interfaces.tryon_engine import BaseTryOnEngine
 from app.services.api.response_builder import ResponseBuilder
+from app.services.jobs.manager import BackgroundJobManager
 
 router = APIRouter(tags=["Health"])
 
@@ -32,13 +34,14 @@ async def get_health() -> HealthResponse:
     "/health/ai",
     summary="AI Pipeline Health & Readiness Check",
     description=(
-        "Inspects AI try-on engine readiness, model weight availability, "
-        "and device configuration without loading heavy weights."
+        "Inspects AI try-on engine readiness, background job queue metrics, "
+        "and hardware device configuration without loading heavy weights."
     ),
 )
 async def get_ai_health(
     request: Request,
     engine: BaseTryOnEngine = Depends(get_tryon_engine),
+    job_manager: BackgroundJobManager = Depends(get_job_manager),
 ) -> Dict[str, Any]:
     """Returns AI try-on engine operational readiness and device metrics."""
     check_health_fn = getattr(engine, "check_health", None)
@@ -55,6 +58,7 @@ async def get_ai_health(
 
     device_info = DeviceManager.describe()
     registered_engines = ModelRegistry.get_registered_engines()
+    job_health = job_manager.get_health()
 
     ai_health_data = {
         "status": "ready" if report_data.get("is_healthy") else "degraded",
@@ -62,6 +66,7 @@ async def get_ai_health(
         "registered_engines": registered_engines,
         "device_info": device_info,
         "engine_health": report_data,
+        "job_system": job_health,
     }
 
     request_id = getattr(request.state, "request_id", None)
