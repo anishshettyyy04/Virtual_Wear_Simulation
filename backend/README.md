@@ -36,6 +36,9 @@ Garment ─────┘
    AgnosticMaskGenerator (Real - Phase 1.2.5B)
              │
              ▼
+    Conditioning Layer (Interfaces - Dedicated Architectural Layer)
+             │
+             ▼
      Mock Try-On Engine
              │
              ▼
@@ -50,6 +53,7 @@ Garment ─────┘
 - **Human Parsing (`SegFormerHumanParser`)**: **REAL** (`mattmdjaga/segformer_b2_clothes` via PyTorch + Hugging Face Transformers, 18-class raw segmentation, `ProjectSemanticLabel` v1 mapping, 8-bit lossless PNG mask artifacts). `MockHumanParser` remains available for mock pipeline testing.
 - **Pose Estimation (`DWPoseEstimator`)**: **REAL** (YOLOX-l Person Detector + RTMPose-l DWPose via ONNX Runtime, 18-point OpenPose COCO-18 schema v1 mapping, derived `NECK` calculation, JSON pose artifacts). `MockPoseEstimator` remains available for mock pipeline testing.
 - **Agnostic Mask Generation (`AgnosticMaskGenerator`)**: **REAL** (Combines SegFormer human parsing + DWPose COCO-18 skeletal pose, resolution-scaled morphology, garment sleeve replacement rules, face/hair shield protection, canonical 8-bit single-channel PNG mask artifacts). `MockAgnosticMaskGenerator` remains available for mock pipeline testing.
+- **Conditioning Layer (`app.services.ai.conditioning`)**: **INTERFACES** (Dedicated architectural layer defining `BaseConditioningAdapter`, `BaseImageAdapter`, `BaseMaskAdapter`, and `BaseDensePoseService` to isolate model-specific resolution, mask tensor, and surface map preparation).
 - **Virtual Try-On Engine (`BaseTryOnEngine`)**: **MOCK** (`MockTryOnEngine`).
 - **Postprocessing (`BasePostprocessor`)**: **MOCK** (`MockPostprocessor`).
 
