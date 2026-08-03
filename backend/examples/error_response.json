@@ -1,0 +1,7 @@
+{
+  "success": false,
+  "message": "Product with ID 'NON_EXISTENT_PROD' not found",
+  "data": null,
+  "timestamp": "2026-07-31T23:00:00Z",
+  "requestId": "f6a7b89c-0d1e-2f3a-4b5c-6d7e8f9a0b1c"
+}

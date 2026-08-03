@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Error Response API Contract",
+  "type": "object",
+  "required": ["success", "message", "timestamp", "requestId"],
+  "properties": {
+    "success": { "type": "boolean", "const": false },
+    "message": { "type": "string" },
+    "data": { "type": ["object", "null"] },
+    "timestamp": { "type": "string" },
+    "requestId": { "type": ["string", "null"] }
+  }
+}

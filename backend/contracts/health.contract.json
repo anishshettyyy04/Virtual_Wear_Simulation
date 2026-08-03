@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Health API Contract",
+  "type": "object",
+  "required": ["success", "message", "data", "timestamp", "requestId"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "message": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "requestId": { "type": "string" },
+    "data": {
+      "type": "object",
+      "required": ["status", "products", "users", "configuration", "strategy", "cache", "analytics"],
+      "properties": {
+        "status": { "type": "string" },
+        "products": { "type": "string" },
+        "users": { "type": "string" },
+        "configuration": { "type": "string" },
+        "strategy": { "type": "string" },
+        "cache": { "type": "string" },
+        "analytics": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "success": true,
+  "message": "Retrieved product 'TS001'",
+  "data": {
+    "id": "TS001",
+    "name": "Classic Black Crewneck T-Shirt",
+    "category": "tshirt",
+    "brand": "Urban Wear",
+    "price": 799.0,
+    "currency": "INR",
+    "sizes": ["S", "M", "L", "XL"],
+    "colors": ["Black", "Dark Grey"],
+    "material": "100% Premium Cotton",
+    "fit": "regular",
+    "style": "casual",
+    "occasion": "Daily Wear",
+    "gender": "unisex",
+    "season": "all-season",
+    "image": "/assets/products/tshirts/ts001.jpg",
+    "description": "Timeless crewneck t-shirt crafted from breathable cotton.",
+    "rating": 4.5,
+    "reviewsCount": 128,
+    "isAvailable": true,
+    "stock": 45,
+    "createdAt": "2026-01-15T10:00:00Z",
+    "updatedAt": "2026-01-15T10:00:00Z"
+  },
+  "timestamp": "2026-07-31T23:00:00Z",
+  "requestId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+}

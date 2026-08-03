@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Product API Contract",
+  "type": "object",
+  "required": ["success", "message", "data", "timestamp", "requestId"],
+  "properties": {
+    "success": { "type": "boolean", "const": true },
+    "message": { "type": "string" },
+    "timestamp": { "type": "string" },
+    "requestId": { "type": "string" },
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "category", "brand", "price", "sizes", "colors", "material", "fit", "style", "gender", "image"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "category": { "type": "string" },
+          "brand": { "type": "string" },
+          "price": { "type": "number" },
+          "currency": { "type": "string" },
+          "sizes": { "type": "array", "items": { "type": "string" } },
+          "colors": { "type": "array", "items": { "type": "string" } },
+          "material": { "type": "string" },
+          "fit": { "type": "string" },
+          "style": { "type": "string" },
+          "gender": { "type": "string" },
+          "image": { "type": "string" }
+        }
+      }
+    }
+  }
+}

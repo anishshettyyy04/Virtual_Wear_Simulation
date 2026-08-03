@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "http://virtualwear.simulation/schemas/recommendation.schema.json",
+  "title": "Recommendation Response Schema",
+  "description": "Production-ready JSON schema validating recommendation engine output envelopes and execution metadata.",
+  "type": "object",
+  "required": [
+    "success",
+    "message",
+    "engineVersion",
+    "strategy",
+    "configVersion",
+    "executionTimeMs",
+    "productsScanned",
+    "productsFiltered",
+    "recommendationsReturned",
+    "userId",
+    "generatedAt",
+    "recommendations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "description": "Execution status flag"
+    },
+    "message": {
+      "type": "string",
+      "description": "Human-readable status or error message"
+    },
+    "engineVersion": {
+      "type": "string",
+      "description": "Semantic engine version code (e.g. 1.0.0)"
+    },
+    "strategy": {
+      "type": "string",
+      "description": "Active strategy identifier (e.g. RuleBased)"
+    },
+    "configVersion": {
+      "type": "string",
+      "description": "Configuration schema version code (e.g. 1.0)"
+    },
+    "executionTimeMs": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Engine execution time in milliseconds"
+    },
+    "productsScanned": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total products evaluated from dataset"
+    },
+    "productsFiltered": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of products passing hard filtering criteria"
+    },
+    "recommendationsReturned": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of ranked recommendations in output payload"
+    },
+    "userId": {
+      "type": "string",
+      "description": "Target user identifier code"
+    },
+    "generatedAt": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+      "description": "ISO 8601 generation timestamp"
+    },
+    "recommendations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "productId",
+          "name",
+          "category",
+          "brand",
+          "price",
+          "score",
+          "reasons"
+        ],
+        "properties": {
+          "productId": { "type": "string", "minLength": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "category": { "type": "string", "minLength": 1 },
+          "brand": { "type": "string", "minLength": 1 },
+          "price": { "type": "number", "exclusiveMinimum": 0 },
+          "currency": { "type": "string" },
+          "image": { "type": "string" },
+          "rating": { "type": "number" },
+          "score": { "type": "number", "minimum": 0, "maximum": 100 },
+          "reasons": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      },
+      "description": "Array of ranked recommended items"
+    }
+  }
+}

@@ -1,58 +1,70 @@
-# Virtual Wear Simulation – Backend API
+# AI Virtual Wear Simulation — Backend System
 
-Production-grade, modular **FastAPI** backend architecture for the **AI-Powered Virtual Wear Simulation** application.
-
----
-
-## 🌟 Features & Architecture
-
-- **Python 3.11+ & FastAPI**: High-performance asynchronous web framework with automatic OpenAPI documentation.
-- **Aggregated Router Architecture**: Modular routing structure via `app/api/v1/router.py` for effortless scaling.
-- **Pydantic v2 Settings Management**: Strict environment loading and type validation for ports, origins, upload limits, and logging.
-- **Request Tracing Middleware**: Automatic UUID generation and header propagation via `X-Request-ID`.
-- **FastAPI Lifespan Hooks**: Context manager managing application startup and graceful shutdown resources.
-- **Standardized Response Contracts**: Explicit Pydantic response models (`HealthResponse`, `StandardErrorResponse`) with machine-readable error codes (`NOT_FOUND`, `VALIDATION_ERROR`, `INTERNAL_SERVER_ERROR`).
-- **Model-Agnostic AI Pipeline Architecture (Phase 1.2.1)**: Internal service-layer abstraction for virtual try-on processing with concurrent stage execution.
-- **Real Image Preprocessing Service (Phase 1.2.2)**: Production Pillow-based image normalization (`ImagePreprocessor`) featuring EXIF transpose, RGBA transparency compositing onto white, proportional `FIT_WITHIN` resizing, and transaction-like atomic commits.
-- **Background Jobs & Progress System (Phase 1.2.8)**: Abstract job queue (`BaseJobQueue`), concurrency-safe registry (`BaseJobRegistry`), worker state machine (`WorkerState`), immutable REST serialization (`JobSnapshot`), centralized state machine (`JobLifecycle`), and registration-driven cleanup (`JobCleanupService`).
-- **Artifact Storage & Lifecycle (Phase 1.2.9B)**: Complete abstraction over Content-Addressable Storage (CAS) featuring dependency injection (`BaseArtifactStorage`, `ArtifactLocator`), transaction context managers, concurrent CAS write locking, artifact versioning, and strict isolation of concerns (`ArtifactMetadataStore`, `ManifestBuilder`, `ArtifactVerifier`, `RetentionManager`, `StorageRecoveryService`).
-- **Comprehensive Test Suite**: Pytest test cases covering health status, CORS headers, Request IDs, error handlers, AI schemas, interfaces, stage ordering, pipeline concurrency, image preprocessing unit tests, job subsystem tests, and pipeline integration tests.
-
+Welcome to the backend system for **AI Virtual Wear Simulation** (`v1.0.0-phase1`). This system provides a unified FastAPI server powering personalized outfit recommendations, 3D body preference modeling, REST APIs, and AI Virtual Try-On execution using IDM-VTON.
 
 ---
 
-## 🧠 AI Pipeline Architecture
+## 🌟 Current Status & Release Info (`v1.0.0-phase1`)
 
-```text
-Person ──────┐
-             ▼
-      ImagePreprocessor (Real - Phase 1.2.2)
-             │
-Garment ─────┘
-             │
-      ┌──────┴──────────────┐
-      ▼                     ▼
- SegFormerParser       DWPoseEstimator
- (Real - Phase 1.2.3B) (Real - Phase 1.2.4B)
-      └──────┬──────────────┘
-             ▼
-   AgnosticMaskGenerator (Real - Phase 1.2.5B)
-             │
-             ▼
-    Conditioning Layer (Real - Phase 1.2.6AA)
-             │
-             ▼
-    ConditioningBundle (Engine-Independent Contract)
-             │
-             ▼
-     Mock Try-On Engine
-             │
-             ▼
-     Mock Postprocessor
-             │
-             ▼
-        TryOnResult
+**Phase 1 Complete (Version v1.0.0-phase1)** — Fully production-ready backend supporting:
+- **Product Data Catalog** (Phase 1.1)
+- **User Preference Model** (Phase 1.2)
+- **Personalized Recommendation Engine & Caching** (Phase 1.3)
+- **Backend REST API & Versioning** (Phase 1.4)
+- **Frontend & AI Service Integration & Deployment Readiness** (Phase 1.5)
+- **System Validation, QA Audit & Release Preparation** (Phase 1.6)
+
+---
+
+## 📌 Project & Release Engineering Assets
+
+- 📌 **Version File**: [`VERSION`](../VERSION) (`v1.0.0-phase1`)
+- 📋 **Release Notes**: [`RELEASE_NOTES.md`](../RELEASE_NOTES.md)
+- 📜 **Changelog**: [`CHANGELOG.md`](../CHANGELOG.md)
+- 🏷️ **Release Tag Guide**: [`docs/release/release-tag.md`](../docs/release/release-tag.md)
+- ✅ **Release Checklist**: [`docs/release/release_checklist.md`](../docs/release/release_checklist.md)
+- 🔒 **Software Bill of Materials (SBOM)**: [`docs/security/sbom.md`](../docs/security/sbom.md)
+- ⚖️ **License**: [`LICENSE`](../LICENSE) (MIT License)
+- 🤝 **Contributing Guide**: [`CONTRIBUTING.md`](../CONTRIBUTING.md)
+- 📜 **Code of Conduct**: [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md)
+
+---
+
+## 📚 Technical Documentation & Audit Reports
+
+- 🎨 **React Frontend Guide**: [`backend/docs/frontend-guide.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/docs/frontend-guide.md)
+- 🤖 **AI Try-On Guide**: [`backend/docs/ai-guide.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/docs/ai-guide.md)
+- 📊 **Monitoring Guide**: [`backend/docs/monitoring.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/docs/monitoring.md)
+- 📝 **API Contracts**: [`backend/contracts/`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/contracts/)
+- 💡 **API Response Examples**: [`backend/examples/`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/examples/)
+- 📁 **System Quality Audit Reports**: [`backend/reports/`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/)
+  - [`repository_audit.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/repository_audit.md)
+  - [`documentation_audit.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/documentation_audit.md)
+  - [`testing_report.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/testing_report.md)
+  - [`performance_summary.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/performance_summary.md)
+  - [`api_validation.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/api_validation.md)
+  - [`security_checklist.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/security_checklist.md)
+  - [`code_quality.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/code_quality.md)
+  - [`dependency_audit.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/dependency_audit.md)
+  - [`release_summary.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/release_summary.md)
+  - [`final_phase1_report.md`](file:///c:/Users/Gagan/OneDrive/Desktop/Virtual_Wear_Simulation/backend/reports/final_phase1_report.md)
+
+---
+
+## ⚡ Developer Quick Start (`Makefile`)
+
+```bash
+make run        # Start FastAPI dev server (http://localhost:8000)
+make test       # Run unit and API integration tests
+make smoke      # Run automated smoke test suite
+make validate   # Validate JSON datasets against schemas
+make benchmark  # Run recommendation engine benchmark
+make report     # Generate performance & latency report
 ```
+
+---
+
+## 🤖 AI Subsystem Architecture (Anish)
 
 ### Stage Implementation Status
 - **Preprocessing (`ImagePreprocessor`)**: **REAL** (Pillow-based validation, EXIF transpose, RGB normalization, `FIT_WITHIN` resizing, atomic output writes).
@@ -60,9 +72,7 @@ Garment ─────┘
 - **Pose Estimation (`DWPoseEstimator`)**: **REAL** (YOLOX-l Person Detector + RTMPose-l DWPose via ONNX Runtime, 18-point OpenPose COCO-18 schema v1 mapping, derived `NECK` calculation, JSON pose artifacts). `MockPoseEstimator` remains available for mock pipeline testing.
 - **Agnostic Mask Generation (`AgnosticMaskGenerator`)**: **REAL** (Combines SegFormer human parsing + DWPose COCO-18 skeletal pose, resolution-scaled morphology, garment sleeve replacement rules, face/hair shield protection, canonical 8-bit single-channel PNG mask artifacts). `MockAgnosticMaskGenerator` remains available for mock pipeline testing.
 - **Conditioning Layer (`app.services.ai.conditioning`)**: **REAL (Phase 1.2.6AA)** (Canonical `ConditioningBundle` engine-independent data contract aggregating image refs, agnostic mask, optional `DensePoseResult`, and metadata).
-- **Virtual Try-On Engine (`BaseTryOnEngine`)**: **MOCK** (`MockTryOnEngine`).
-- **Postprocessing (`BasePostprocessor`)**: **MOCK** (`MockPostprocessor`).
-
+- **Virtual Try-On Engine (`BaseTryOnEngine`)**: **REAL / IDM-VTON**.
 
 ---
 
@@ -124,8 +134,6 @@ Garment ─────┘
 | `AI_POSE_DETECTION_THRESHOLD` | `0.4` | Minimum bounding box score threshold for person detector |
 | `AI_POSE_OUTPUT_DIR` | `"data/processed/poses"` | Output directory for JSON pose artifacts |
 
-
-
 ---
 
 ## 🚀 Tech Stack
@@ -143,6 +151,7 @@ Garment ─────┘
 
 ```text
 backend/
+├── api/                           # REST API routes (v1) and custom middleware
 ├── app/
 │   ├── main.py                    # FastAPI app initialization, lifespan, CORS, middleware
 │   ├── api/v1/
@@ -160,20 +169,18 @@ backend/
 │   │   ├── exceptions.py          # AIPipelineError exception hierarchy
 │   │   ├── interfaces/            # Abstract base classes
 │   │   ├── preprocessing/         # Real image preprocessor implementation (Pillow)
-│   │   │   ├── __init__.py
-│   │   │   └── image_preprocessor.py
 │   │   └── mock/                  # Mock stage implementations
 │   └── utils/logger.py            # Centralized logger
+├── data/                          # Seed datasets (products.json, user_preferences.json)
+├── recommendation/                # Recommendation engine modules
+├── services/                      # Product, User, Recommendation, Health & Metrics services
 ├── tests/
+│   ├── test_api.py                # API integration test suite
+│   ├── test_recommendation.py     # Recommendation engine test suite
+│   ├── test_smoke.py               # E2E smoke test suite
 │   ├── test_health.py             # Health endpoint tests
 │   ├── test_errors.py             # Error handler tests
-│   ├── test_middleware.py         # CORS & Request ID header tests
-│   └── ai/
-│       ├── test_schemas.py        # Schema validation tests
-│       ├── test_interfaces.py     # Interface inheritance tests
-│       ├── test_pipeline.py       # Pipeline E2E & concurrency tests
-│       ├── test_image_preprocessor.py # ImagePreprocessor unit tests
-│       └── test_pipeline_integration.py # Real preprocessor + pipeline integration tests
+│   └── ai/                        # AI pipeline unit test suite
 ├── .env.example
 ├── pyproject.toml
 ├── README.md
@@ -182,64 +189,37 @@ backend/
 
 ---
 
-## ⚡ Setup & Development Guide
+## 🏃 Running Server & Testing
 
-### 1. Prerequisites
-- **Python**: `v3.11` or higher installed.
-
-### 2. Create Virtual Environment & Activate
+### Start FastAPI Uvicorn Server
 
 ```bash
-cd backend
-python -m venv .venv
-```
-
-#### Activating Virtual Environment:
-- **Windows (PowerShell)**: `.\.venv\Scripts\Activate.ps1`
-- **Windows (CMD)**: `.venv\Scripts\activate.bat`
-- **macOS / Linux**: `source .venv/bin/activate`
-
-### 3. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Environment Configuration
-
-```bash
-# Windows
-copy .env.example .env
-# Linux / macOS
-cp .env.example .env
-```
-
----
-
-## 🏃 Running Application & Test Suite
-
-### Start Uvicorn Server
-
-```bash
-uvicorn app.main:app --reload
+uvicorn backend.api.app:app --reload
 ```
 
 - **Health Endpoint**: `GET http://localhost:8000/api/v1/health`
-- **AI Health Endpoint**: `GET http://localhost:8000/api/v1/health/ai`
-- **Engine Discovery Endpoint**: `GET http://localhost:8000/api/v1/engines`
-- **Virtual Try-On Endpoint**: `POST http://localhost:8000/api/v1/tryon`
+- **Products Endpoint**: `GET http://localhost:8000/api/v1/products`
+- **Users Endpoint**: `GET http://localhost:8000/api/v1/users`
+- **Recommendations Endpoint**: `POST http://localhost:8000/api/v1/recommendations`
 - **Swagger Documentation**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **ReDoc Documentation**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
 
-### Run Pytest Suite
+### Run Tests & Validation
 
 ```bash
+# Run backend validation scripts
+python backend/scripts/validate_products.py
+python backend/scripts/validate_user_preferences.py
+
+# Run recommendation & API unit test suites
+python backend/tests/test_recommendation.py
+python backend/tests/test_api.py
+python backend/tests/test_smoke.py
+
+# Run Pytest suite
 pytest
-```
 
-### Run Linter & Formatter
-
-```bash
+# Run Linter & Formatter
 ruff check .
 black --check .
 ```

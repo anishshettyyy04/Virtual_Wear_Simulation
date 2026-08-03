@@ -37,7 +37,7 @@ Every product entity in the system is represented by 23 standardized attributes:
 
 ## 2. Folder Structure
 
-```
+```text
 backend/
 ├── assets/
 │   └── products/
@@ -109,3 +109,16 @@ IDM-VTON requires classifying garments into specific pose-masking zones:
 ### 5.2 Image & Asset Pipelines
 - **Resolution**: Garment images linked via `image` are stored in uniform aspect ratios suitable for 768x1024 / 512x384 UNet conditioning inputs.
 - **Alpha Mask Extraction**: Transparent PNG or pre-segmented background images are referenced from `/assets/products/{category}/` to bypass real-time background removal overhead during inference.
+
+---
+
+## Future Enhancements
+
+The foundational product data structure established in Phase 1.1 enables the following upcoming engineering milestones:
+
+1. **Product Recommendation Engine (Phase 1.3)**: Leveraging `style`, `fit`, `occasion`, `colors`, and `tags` to compute user-item similarity matrices using TF-IDF and vector embedding cosine distance.
+2. **User Preference Model (Phase 1.2)**: Mapping user preference vectors directly against product attributes (`category`, `fit`, `style`, `color`, `material`).
+3. **REST API Integration (Phase 1.4)**: Exposing `/api/v1/products` endpoints with filtering, sorting, pagination, and full-text search.
+4. **Database Migration**: Seamless transition from `products.json` file storage to PostgreSQL (JSONB / relational) or MongoDB with indexing on `category`, `price`, and `tags`.
+5. **AI Try-On Image Processing**: Automated background removal, human parsing mask generation, and pose estimation integration with IDM-VTON.
+6. **Authentication-Ready Architecture**: Decoupled backend architecture prepared for OAuth2 / JWT user authentication and session management.

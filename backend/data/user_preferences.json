@@ -1,0 +1,542 @@
+[
+  {
+    "userId": "USR001",
+    "name": "Aarav Sharma",
+    "gender": "men",
+    "ageGroup": "adult",
+    "preferredCategories": ["tshirt", "jeans", "hoodie"],
+    "preferredColors": ["Black", "Heather Grey", "Navy Blue"],
+    "preferredStyles": ["casual", "streetwear"],
+    "preferredFit": "regular",
+    "preferredBrands": ["Urban Wear", "Street Culture", "Cozy Living"],
+    "preferredMaterials": ["100% Premium Cotton", "Fleece", "Cotton Denim"],
+    "preferredOccasions": ["Daily Wear", "Casual Outing"],
+    "preferredSeasons": ["all-season", "winter"],
+    "budgetRange": {
+      "min": 500,
+      "max": 3000
+    },
+    "budgetTier": "low",
+    "favoriteSizes": ["M", "L", "32"],
+    "height": 178,
+    "weight": 72,
+    "bodyType": "regular",
+    "wishlist": ["TS002", "JN002", "HD002"],
+    "purchaseHistory": ["TS001", "JN001"],
+    "recommendationHistory": ["TS001", "JN001", "HD001"],
+    "location": {
+      "country": "India",
+      "state": "Karnataka",
+      "city": "Bengaluru"
+    },
+    "climate": "tropical",
+    "favoriteColorsFrequency": {
+      "black": 18,
+      "grey": 12,
+      "blue": 5
+    },
+    "interactionMetrics": {
+      "productsViewed": 125,
+      "productsLiked": 42,
+      "productsPurchased": 9
+    },
+    "lastPreferenceUpdate": "2026-07-31T18:00:00Z",
+    "createdAt": "2026-01-10T09:00:00Z",
+    "updatedAt": "2026-01-10T09:00:00Z"
+  },
+  {
+    "userId": "USR002",
+    "name": "Ananya Patel",
+    "gender": "women",
+    "ageGroup": "adult",
+    "preferredCategories": ["dress", "kurta", "tshirt"],
+    "preferredColors": ["Yellow Floral", "Emerald Green", "Pastel Pink"],
+    "preferredStyles": ["casual", "formal", "ethnic"],
+    "preferredFit": "slim",
+    "preferredBrands": ["Bloom & Blossom", "Elegance Atelier", "Royal Heritage"],
+    "preferredMaterials": ["100% Georgette Viscose", "Chanderi Silk", "Cotton"],
+    "preferredOccasions": ["Day Party", "Festive & Wedding", "Office"],
+    "preferredSeasons": ["summer", "all-season"],
+    "budgetRange": {
+      "min": 1500,
+      "max": 5000
+    },
+    "budgetTier": "medium",
+    "favoriteSizes": ["S", "M"],
+    "height": 165,
+    "weight": 54,
+    "bodyType": "slim",
+    "wishlist": ["DR002", "KR004"],
+    "purchaseHistory": ["DR001", "KR002"],
+    "recommendationHistory": ["DR001", "DR002", "KR004"],
+    "location": {
+      "country": "India",
+      "state": "Maharashtra",
+      "city": "Mumbai"
+    },
+    "climate": "coastal",
+    "favoriteColorsFrequency": {
+      "yellow": 15,
+      "green": 10,
+      "pink": 7
+    },
+    "interactionMetrics": {
+      "productsViewed": 160,
+      "productsLiked": 58,
+      "productsPurchased": 14
+    },
+    "lastPreferenceUpdate": "2026-07-31T18:30:00Z",
+    "createdAt": "2026-01-11T10:30:00Z",
+    "updatedAt": "2026-01-11T10:30:00Z"
+  },
+  {
+    "userId": "USR003",
+    "name": "Rohan Verma",
+    "gender": "men",
+    "ageGroup": "adult",
+    "preferredCategories": ["shirt", "pants", "jacket"],
+    "preferredColors": ["White", "Khaki", "Charcoal Grey"],
+    "preferredStyles": ["formal", "casual"],
+    "preferredFit": "slim",
+    "preferredBrands": ["Executive Style", "Nordic Shield"],
+    "preferredMaterials": ["100% Oxford Cotton", "97% Cotton 3% Spandex", "Nylon Shell"],
+    "preferredOccasions": ["Office & Meetings", "Corporate & Business"],
+    "preferredSeasons": ["all-season", "winter"],
+    "budgetRange": {
+      "min": 1500,
+      "max": 6000
+    },
+    "budgetTier": "medium",
+    "favoriteSizes": ["40", "32", "L"],
+    "height": 182,
+    "weight": 76,
+    "bodyType": "athletic",
+    "wishlist": ["SH001", "PN003"],
+    "purchaseHistory": ["PN001", "JK001"],
+    "recommendationHistory": ["SH001", "PN001", "JK001"],
+    "location": {
+      "country": "India",
+      "state": "Delhi",
+      "city": "New Delhi"
+    },
+    "climate": "temperate",
+    "favoriteColorsFrequency": {
+      "white": 22,
+      "khaki": 14,
+      "grey": 9
+    },
+    "interactionMetrics": {
+      "productsViewed": 98,
+      "productsLiked": 31,
+      "productsPurchased": 8
+    },
+    "lastPreferenceUpdate": "2026-07-31T19:00:00Z",
+    "createdAt": "2026-01-12T14:15:00Z",
+    "updatedAt": "2026-01-12T14:15:00Z"
+  },
+  {
+    "userId": "USR004",
+    "name": "Kabir Mehta",
+    "gender": "men",
+    "ageGroup": "teen",
+    "preferredCategories": ["tshirt", "jeans", "hoodie", "jacket"],
+    "preferredColors": ["Washed Grey", "Jet Black", "Light Wash Blue"],
+    "preferredStyles": ["streetwear", "sports"],
+    "preferredFit": "oversized",
+    "preferredBrands": ["Street Culture", "Rebel Outerwear", "ActivePro"],
+    "preferredMaterials": ["Heavyweight Cotton", "French Terry Cotton", "Faux Leather"],
+    "preferredOccasions": ["Streetwear", "Night Out", "Casual Outing"],
+    "preferredSeasons": ["summer", "all-season"],
+    "budgetRange": {
+      "min": 1000,
+      "max": 7500
+    },
+    "budgetTier": "premium",
+    "favoriteSizes": ["L", "XL", "34"],
+    "height": 175,
+    "weight": 68,
+    "bodyType": "regular",
+    "wishlist": ["JK002", "HD002"],
+    "purchaseHistory": ["TS002", "JN002"],
+    "recommendationHistory": ["TS002", "JN002", "HD002", "JK002"],
+    "location": {
+      "country": "India",
+      "state": "Telangana",
+      "city": "Hyderabad"
+    },
+    "climate": "tropical",
+    "favoriteColorsFrequency": {
+      "black": 30,
+      "grey": 20,
+      "blue": 11
+    },
+    "interactionMetrics": {
+      "productsViewed": 210,
+      "productsLiked": 85,
+      "productsPurchased": 18
+    },
+    "lastPreferenceUpdate": "2026-07-31T19:15:00Z",
+    "createdAt": "2026-01-13T16:45:00Z",
+    "updatedAt": "2026-01-13T16:45:00Z"
+  },
+  {
+    "userId": "USR005",
+    "name": "Diya Nair",
+    "gender": "women",
+    "ageGroup": "teen",
+    "preferredCategories": ["dress", "tshirt", "jeans", "hoodie"],
+    "preferredColors": ["Sky Blue", "Rust Orange", "Off-White"],
+    "preferredStyles": ["casual", "streetwear"],
+    "preferredFit": "relaxed",
+    "preferredBrands": ["Boho Chic", "Street Culture", "Urban Wear"],
+    "preferredMaterials": ["100% Breathable Cotton", "Heavyweight Cotton"],
+    "preferredOccasions": ["Resort & Travel", "Daily Wear", "Weekend Outing"],
+    "preferredSeasons": ["summer", "monsoon"],
+    "budgetRange": {
+      "min": 800,
+      "max": 3500
+    },
+    "budgetTier": "low",
+    "favoriteSizes": ["S", "M", "28"],
+    "height": 160,
+    "weight": 50,
+    "bodyType": "slim",
+    "wishlist": ["DR003", "JN002"],
+    "purchaseHistory": ["TS001", "DR001"],
+    "recommendationHistory": ["DR003", "TS001", "JN002"],
+    "location": {
+      "country": "India",
+      "state": "Kerala",
+      "city": "Kochi"
+    },
+    "climate": "coastal",
+    "favoriteColorsFrequency": {
+      "blue": 14,
+      "orange": 9,
+      "white": 6
+    },
+    "interactionMetrics": {
+      "productsViewed": 145,
+      "productsLiked": 50,
+      "productsPurchased": 11
+    },
+    "lastPreferenceUpdate": "2026-07-31T19:30:00Z",
+    "createdAt": "2026-01-14T11:20:00Z",
+    "updatedAt": "2026-01-14T11:20:00Z"
+  },
+  {
+    "userId": "USR006",
+    "name": "Vikramaditya Roy",
+    "gender": "men",
+    "ageGroup": "senior",
+    "preferredCategories": ["kurta", "shirt", "pants"],
+    "preferredColors": ["Maroon", "Gold", "Pistachio Green", "White"],
+    "preferredStyles": ["ethnic", "formal"],
+    "preferredFit": "regular",
+    "preferredBrands": ["Royal Heritage", "Urban Ethnic", "Executive Style"],
+    "preferredMaterials": ["Art Silk Blend", "100% Pure Linen", "Poly-Viscose"],
+    "preferredOccasions": ["Festive & Wedding", "Casual Outing", "Corporate"],
+    "preferredSeasons": ["all-season", "summer"],
+    "budgetRange": {
+      "min": 1200,
+      "max": 5000
+    },
+    "budgetTier": "medium",
+    "favoriteSizes": ["42", "44", "36"],
+    "height": 172,
+    "weight": 78,
+    "bodyType": "regular",
+    "wishlist": ["KR001", "KR003"],
+    "purchaseHistory": ["PN003", "SH001"],
+    "recommendationHistory": ["KR001", "KR003", "PN003"],
+    "location": {
+      "country": "India",
+      "state": "West Bengal",
+      "city": "Kolkata"
+    },
+    "climate": "temperate",
+    "favoriteColorsFrequency": {
+      "maroon": 16,
+      "gold": 11,
+      "green": 8
+    },
+    "interactionMetrics": {
+      "productsViewed": 82,
+      "productsLiked": 28,
+      "productsPurchased": 6
+    },
+    "lastPreferenceUpdate": "2026-07-31T19:45:00Z",
+    "createdAt": "2026-01-15T08:30:00Z",
+    "updatedAt": "2026-01-15T08:30:00Z"
+  },
+  {
+    "userId": "USR007",
+    "name": "Siddharth Rao",
+    "gender": "men",
+    "ageGroup": "adult",
+    "preferredCategories": ["tshirt", "hoodie", "jacket", "pants"],
+    "preferredColors": ["Navy Blue", "Red & Navy", "Neon Yellow"],
+    "preferredStyles": ["sports", "casual"],
+    "preferredFit": "slim",
+    "preferredBrands": ["ActivePro", "Nordic Shield"],
+    "preferredMaterials": ["Polyester Cotton Blend", "Breathable Knit Blend", "Ripstop Polyester"],
+    "preferredOccasions": ["Sports & Leisure", "Workout & Gym", "Outdoor & Trekking"],
+    "preferredSeasons": ["summer", "monsoon"],
+    "budgetRange": {
+      "min": 1000,
+      "max": 4000
+    },
+    "budgetTier": "medium",
+    "favoriteSizes": ["M", "L", "32"],
+    "height": 180,
+    "weight": 75,
+    "bodyType": "athletic",
+    "wishlist": ["JK003", "HD003"],
+    "purchaseHistory": ["TS003"],
+    "recommendationHistory": ["TS003", "HD003", "JK003"],
+    "location": {
+      "country": "India",
+      "state": "Tamil Nadu",
+      "city": "Chennai"
+    },
+    "climate": "coastal",
+    "favoriteColorsFrequency": {
+      "blue": 19,
+      "red": 12,
+      "yellow": 7
+    },
+    "interactionMetrics": {
+      "productsViewed": 115,
+      "productsLiked": 39,
+      "productsPurchased": 7
+    },
+    "lastPreferenceUpdate": "2026-07-31T20:00:00Z",
+    "createdAt": "2026-01-16T13:10:00Z",
+    "updatedAt": "2026-01-16T13:10:00Z"
+  },
+  {
+    "userId": "USR008",
+    "name": "Pooja Banerjee",
+    "gender": "women",
+    "ageGroup": "adult",
+    "preferredCategories": ["kurta", "dress"],
+    "preferredColors": ["Indigo Blue", "Pink", "Mustard Yellow"],
+    "preferredStyles": ["ethnic", "casual"],
+    "preferredFit": "relaxed",
+    "preferredBrands": ["Ethnic Craft", "Royal Heritage", "Bloom & Blossom"],
+    "preferredMaterials": ["100% Jaipuri Cotton", "Chanderi Silk", "Georgette"],
+    "preferredOccasions": ["Daily Ethnic & Office", "Festive & Puja"],
+    "preferredSeasons": ["summer", "all-season"],
+    "budgetRange": {
+      "min": 1500,
+      "max": 4500
+    },
+    "budgetTier": "medium",
+    "favoriteSizes": ["M", "L"],
+    "height": 162,
+    "weight": 58,
+    "bodyType": "curvy",
+    "wishlist": ["KR004", "DR001"],
+    "purchaseHistory": ["KR002"],
+    "recommendationHistory": ["KR002", "KR004", "DR001"],
+    "location": {
+      "country": "India",
+      "state": "Gujarat",
+      "city": "Ahmedabad"
+    },
+    "climate": "desert",
+    "favoriteColorsFrequency": {
+      "blue": 13,
+      "pink": 11,
+      "yellow": 8
+    },
+    "interactionMetrics": {
+      "productsViewed": 135,
+      "productsLiked": 46,
+      "productsPurchased": 10
+    },
+    "lastPreferenceUpdate": "2026-07-31T20:15:00Z",
+    "createdAt": "2026-01-17T17:00:00Z",
+    "updatedAt": "2026-01-17T17:00:00Z"
+  },
+  {
+    "userId": "USR009",
+    "name": "Aditya Joshi",
+    "gender": "men",
+    "ageGroup": "adult",
+    "preferredCategories": ["shirt", "jeans", "pants"],
+    "preferredColors": ["Olive Green", "Beige", "Indigowash Blue", "Olive Drab"],
+    "preferredStyles": ["casual", "streetwear"],
+    "preferredFit": "relaxed",
+    "preferredBrands": ["Breeze Casuals", "Rugged Denim Co.", "Street Culture"],
+    "preferredMaterials": ["Linen Cotton Blend", "100% Cotton Denim", "Heavy Cotton Twill"],
+    "preferredOccasions": ["Vacation & Beach", "Casual Outing", "Outdoor & Travel"],
+    "preferredSeasons": ["summer", "monsoon"],
+    "budgetRange": {
+      "min": 1200,
+      "max": 3500
+    },
+    "budgetTier": "low",
+    "favoriteSizes": ["L", "XL", "34"],
+    "height": 176,
+    "weight": 74,
+    "bodyType": "regular",
+    "wishlist": ["SH003", "PN002"],
+    "purchaseHistory": ["SH002", "JN003"],
+    "recommendationHistory": ["SH002", "SH003", "PN002"],
+    "location": {
+      "country": "India",
+      "state": "Goa",
+      "city": "Panaji"
+    },
+    "climate": "coastal",
+    "favoriteColorsFrequency": {
+      "green": 17,
+      "beige": 10,
+      "blue": 9
+    },
+    "interactionMetrics": {
+      "productsViewed": 150,
+      "productsLiked": 52,
+      "productsPurchased": 12
+    },
+    "lastPreferenceUpdate": "2026-07-31T20:30:00Z",
+    "createdAt": "2026-01-18T10:40:00Z",
+    "updatedAt": "2026-01-18T10:40:00Z"
+  },
+  {
+    "userId": "USR010",
+    "name": "Meera Iyer",
+    "gender": "women",
+    "ageGroup": "senior",
+    "preferredCategories": ["kurta", "dress"],
+    "preferredColors": ["Maroon", "Ivory", "Emerald Green"],
+    "preferredStyles": ["ethnic", "formal"],
+    "preferredFit": "regular",
+    "preferredBrands": ["Royal Heritage", "Elegance Atelier"],
+    "preferredMaterials": ["Chanderi Silk", "Stretch Satin", "Cotton"],
+    "preferredOccasions": ["Festive & Wedding", "Evening Party & Gala"],
+    "preferredSeasons": ["all-season", "winter"],
+    "budgetRange": {
+      "min": 2000,
+      "max": 7000
+    },
+    "budgetTier": "premium",
+    "favoriteSizes": ["L", "XL"],
+    "height": 158,
+    "weight": 62,
+    "bodyType": "curvy",
+    "wishlist": ["DR002"],
+    "purchaseHistory": ["KR001", "KR004"],
+    "recommendationHistory": ["KR001", "DR002"],
+    "location": {
+      "country": "India",
+      "state": "Rajasthan",
+      "city": "Jaipur"
+    },
+    "climate": "desert",
+    "favoriteColorsFrequency": {
+      "maroon": 20,
+      "ivory": 12,
+      "green": 9
+    },
+    "interactionMetrics": {
+      "productsViewed": 95,
+      "productsLiked": 33,
+      "productsPurchased": 7
+    },
+    "lastPreferenceUpdate": "2026-07-31T20:45:00Z",
+    "createdAt": "2026-01-19T12:15:00Z",
+    "updatedAt": "2026-01-19T12:15:00Z"
+  },
+  {
+    "userId": "USR011",
+    "name": "Karan Singhania",
+    "gender": "men",
+    "ageGroup": "adult",
+    "preferredCategories": ["jacket", "jeans", "shirt"],
+    "preferredColors": ["Dark Brown", "Dark Blue Wash", "White"],
+    "preferredStyles": ["streetwear", "casual", "formal"],
+    "preferredFit": "slim",
+    "preferredBrands": ["Rebel Outerwear", "Denim Craft", "Executive Style"],
+    "preferredMaterials": ["Faux Leather & Polyester", "98% Cotton 2% Elastane"],
+    "preferredOccasions": ["Night Out", "Daily Wear", "Office"],
+    "preferredSeasons": ["winter", "all-season"],
+    "budgetRange": {
+      "min": 2000,
+      "max": 8000
+    },
+    "budgetTier": "premium",
+    "favoriteSizes": ["M", "L", "32"],
+    "height": 185,
+    "weight": 80,
+    "bodyType": "athletic",
+    "wishlist": ["JK002", "JN001"],
+    "purchaseHistory": ["SH001"],
+    "recommendationHistory": ["JK002", "JN001", "SH001"],
+    "location": {
+      "country": "India",
+      "state": "Himachal Pradesh",
+      "city": "Shimla"
+    },
+    "climate": "cold",
+    "favoriteColorsFrequency": {
+      "brown": 15,
+      "blue": 11,
+      "white": 8
+    },
+    "interactionMetrics": {
+      "productsViewed": 105,
+      "productsLiked": 40,
+      "productsPurchased": 9
+    },
+    "lastPreferenceUpdate": "2026-07-31T21:00:00Z",
+    "createdAt": "2026-01-20T15:50:00Z",
+    "updatedAt": "2026-01-20T15:50:00Z"
+  },
+  {
+    "userId": "USR012",
+    "name": "Tara Sen",
+    "gender": "unisex",
+    "ageGroup": "adult",
+    "preferredCategories": ["tshirt", "pants", "hoodie"],
+    "preferredColors": ["Black", "Olive", "Charcoal"],
+    "preferredStyles": ["streetwear", "casual", "sports"],
+    "preferredFit": "oversized",
+    "preferredBrands": ["Urban Wear", "Cozy Living", "Street Culture"],
+    "preferredMaterials": ["100% Premium Cotton", "French Terry Cotton", "Cotton Twill"],
+    "preferredOccasions": ["Daily Lounge", "Casual Outing"],
+    "preferredSeasons": ["all-season"],
+    "budgetRange": {
+      "min": 700,
+      "max": 3000
+    },
+    "budgetTier": "low",
+    "favoriteSizes": ["M", "L"],
+    "height": 168,
+    "weight": 56,
+    "bodyType": "slim",
+    "wishlist": ["HD002", "PN002"],
+    "purchaseHistory": ["TS001"],
+    "recommendationHistory": ["TS001", "HD002", "PN002"],
+    "location": {
+      "country": "India",
+      "state": "Assam",
+      "city": "Guwahati"
+    },
+    "climate": "temperate",
+    "favoriteColorsFrequency": {
+      "black": 21,
+      "olive": 13,
+      "charcoal": 9
+    },
+    "interactionMetrics": {
+      "productsViewed": 130,
+      "productsLiked": 45,
+      "productsPurchased": 10
+    },
+    "lastPreferenceUpdate": "2026-07-31T21:15:00Z",
+    "createdAt": "2026-01-21T18:00:00Z",
+    "updatedAt": "2026-01-21T18:00:00Z"
+  }
+]
