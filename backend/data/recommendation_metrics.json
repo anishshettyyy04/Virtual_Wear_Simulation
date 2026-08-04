@@ -1,0 +1,99 @@
+{
+  "benchmarkSummary": {
+    "timestamp": "2026-08-04T09:29:21Z",
+    "usersTested": 12,
+    "totalRuns": 24,
+    "totalDurationSec": 0.2793,
+    "averageLatencyMs": 11.64,
+    "recommendationsPerSecond": 85.9,
+    "productsProcessed": 25,
+    "cacheStats": {
+      "enabled": true,
+      "ttlSeconds": 300,
+      "activeEntries": 12,
+      "hits": 12,
+      "misses": 12,
+      "hitRatePercent": 50.0
+    }
+  },
+  "analytics": {
+    "averageRecommendationScore": 0.0,
+    "mostRecommendedProducts": [
+      [
+        "HD001",
+        22
+      ],
+      [
+        "PN002",
+        20
+      ],
+      [
+        "JN002",
+        18
+      ],
+      [
+        "SH003",
+        18
+      ],
+      [
+        "HD002",
+        16
+      ]
+    ],
+    "categoryPopularity": {
+      "unknown": 24
+    },
+    "recommendationFrequency": {
+      "TS002": 0.4167,
+      "JN002": 0.75,
+      "HD002": 0.6667,
+      "HD001": 0.9167,
+      "TS001": 0.1667,
+      "JN003": 0.25,
+      "JN001": 0.5,
+      "TS003": 0.3333,
+      "PN002": 0.8333,
+      "SH003": 0.75,
+      "DR002": 0.25,
+      "KR004": 0.25,
+      "DR001": 0.3333,
+      "DR003": 0.3333,
+      "KR002": 0.3333,
+      "SH001": 0.25,
+      "PN003": 0.5,
+      "PN001": 0.4167,
+      "SH002": 0.25,
+      "JK003": 0.5833,
+      "JK001": 0.3333,
+      "JK002": 0.1667,
+      "HD003": 0.25,
+      "KR001": 0.0833,
+      "KR003": 0.0833
+    },
+    "userPreferenceDistribution": {
+      "totalUsers": 12,
+      "genderDistribution": {
+        "men": 7,
+        "women": 4,
+        "unisex": 1
+      },
+      "styleDistribution": {
+        "casual": 9,
+        "streetwear": 6,
+        "formal": 5,
+        "ethnic": 4,
+        "sports": 3
+      },
+      "categoryDistribution": {
+        "tshirt": 6,
+        "jeans": 5,
+        "hoodie": 5,
+        "dress": 4,
+        "kurta": 4,
+        "shirt": 4,
+        "pants": 5,
+        "jacket": 4
+      }
+    }
+  }
+}

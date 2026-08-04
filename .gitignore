@@ -39,7 +39,11 @@ __pycache__/
 
 # Local Data & Model Weights
 data/
-backend/data/
+backend/data/*
+!backend/data/README.md
+!backend/data/products.json
+!backend/data/user_preferences.json
+!backend/data/recommendation_metrics.json
 *.onnx
 *.pth
 *.pt
