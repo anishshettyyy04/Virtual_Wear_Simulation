@@ -6,7 +6,17 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setErrorState] = useState(null);
+
+  const setError = useCallback((err) => {
+    if (!err) {
+      setErrorState(null);
+    } else if (typeof err === 'object') {
+      setErrorState(err.message || JSON.stringify(err));
+    } else {
+      setErrorState(String(err));
+    }
+  }, []);
 
   // Restore persistent authentication session on application initialization
   useEffect(() => {
@@ -67,12 +77,12 @@ export const AuthProvider = ({ children }) => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [setError]);
 
   // Clear auth error state
   const clearError = useCallback(() => {
     setError(null);
-  }, []);
+  }, [setError]);
 
   // Log out action
   const logout = useCallback(async () => {
@@ -87,7 +97,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setError(null);
     }
-  }, []);
+  }, [setError]);
 
   // Handle global 401 Unauthorized event
   useEffect(() => {
@@ -117,12 +127,12 @@ export const AuthProvider = ({ children }) => {
       }
       throw new Error('Invalid authentication response from server.');
     } catch (err) {
-      const errorMsg = err.message || 'Login failed. Please check your credentials.';
+      const errorMsg = typeof err === 'object' ? (err.message || 'Login failed. Please check your credentials.') : String(err);
       setError(errorMsg);
       setIsLoading(false);
       return null;
     }
-  }, []);
+  }, [setError]);
 
   // Register action
   const register = useCallback(async (userData) => {
@@ -140,12 +150,12 @@ export const AuthProvider = ({ children }) => {
       }
       throw new Error('Registration failed to return valid user credentials.');
     } catch (err) {
-      const errorMsg = err.message || 'Registration failed. Please try again.';
+      const errorMsg = typeof err === 'object' ? (err.message || 'Registration failed. Please try again.') : String(err);
       setError(errorMsg);
       setIsLoading(false);
       return null;
     }
-  }, []);
+  }, [setError]);
 
   const isAuthenticated = Boolean(token && user);
 

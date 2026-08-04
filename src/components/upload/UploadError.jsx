@@ -22,7 +22,7 @@ export const UploadError = ({
           </div>
           <div className="space-y-1">
             <h4 className="text-sm font-bold text-rose-300">Upload Validation Error</h4>
-            <p className="text-xs text-rose-200/90 leading-relaxed">{error}</p>
+            <p className="text-xs text-rose-200/90 leading-relaxed">{typeof error === 'object' ? (error?.message || JSON.stringify(error)) : String(error)}</p>
           </div>
         </div>
 

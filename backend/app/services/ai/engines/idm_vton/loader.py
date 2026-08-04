@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from app.services.ai.engines.common.config import VTONEngineConfig
@@ -74,18 +75,65 @@ class IDMVTONLoader:
             )
 
     def _load_pipeline_modules(self, device: str) -> Dict[str, Any]:
-        """Loads diffusers components or returns mock components for testing."""
-        # For testing / non-gpu fallback: returns a dictionary of pipeline references
-        return {
-            "device": device,
-            "dtype": self.config.dtype,
-            "offload_mode": self.config.offload_mode,
-            "scheduler": self.config.scheduler,
-            "unet": "SDXL_Inpaint_UNet",
-            "garment_unet": "Garment_UNet",
-            "vae": "SDXL_VAE",
-            "text_encoder": "CLIPTextModel",
-            "text_encoder_2": "OpenCLIPViT_bigG",
-            "image_encoder": "CLIPVisionModel",
-            "config": self.config,
-        }
+        """Loads real diffusers pipeline components or returns mock components if diffusers fails."""
+        try:
+            import torch
+            from diffusers import StableDiffusionXLInpaintPipeline
+
+            target_model_dir = Path(self.config.model_directory)
+            if not target_model_dir.exists() and (Path("backend") / target_model_dir).exists():
+                target_model_dir = Path("backend") / target_model_dir
+
+            logger.info(
+                f"IDMVTONLoader: Instantiating SDXL Inpaint Pipeline from '{target_model_dir}'"
+            )
+            dtype = torch.float16 if self.config.dtype in ["float16", "fp16"] else torch.float32
+            pipe = StableDiffusionXLInpaintPipeline.from_pretrained(
+                str(target_model_dir),
+                torch_dtype=dtype,
+                feature_extractor=None,
+                image_encoder=None,
+            )
+
+            if device.startswith("cuda") and torch.cuda.is_available():
+                pipe.enable_model_cpu_offload()
+                if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_tiling"):
+                    pipe.vae.enable_tiling()
+                logger.info("IDMVTONLoader: Enabled float16, CPU model offloading, and VAE tiling on GPU")
+            elif device != "cpu":
+                try:
+                    pipe.to(device)
+                except Exception as e:
+                    logger.warning(f"IDMVTONLoader: pipe.to('{device}') warning: {e}")
+
+            return {
+                "device": device,
+                "dtype": self.config.dtype,
+                "offload_mode": self.config.offload_mode,
+                "scheduler": self.config.scheduler,
+                "pipe": pipe,
+                "mock_fallback": False,
+                "unet": getattr(pipe, "unet", "UNet2DConditionModel"),
+                "vae": getattr(pipe, "vae", "AutoencoderKL"),
+                "text_encoder": getattr(pipe, "text_encoder", "CLIPTextModel"),
+                "text_encoder_2": getattr(pipe, "text_encoder_2", "CLIPTextModelWithProjection"),
+                "image_encoder": getattr(pipe, "image_encoder", "CLIPVisionModelWithProjection"),
+                "config": self.config,
+            }
+        except Exception as exc:
+            logger.warning(f"IDMVTONLoader: Failed to instantiate real diffusers pipeline: {exc}. Falling back to mock component references.")
+            return {
+                "device": device,
+                "dtype": self.config.dtype,
+                "offload_mode": self.config.offload_mode,
+                "scheduler": self.config.scheduler,
+                "mock_fallback": True,
+                "unet": "SDXL_Inpaint_UNet",
+                "garment_unet": "Garment_UNet",
+                "vae": "SDXL_VAE",
+                "text_encoder": "CLIPTextModel",
+                "text_encoder_2": "OpenCLIPViT_bigG",
+                "image_encoder": "CLIPVisionModel",
+                "config": self.config,
+            }
+

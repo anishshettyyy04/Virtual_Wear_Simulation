@@ -29,7 +29,11 @@ def generate_recommendations(
     res = rec_service.generate_recommendations(
         user_id=payload.userId,
         limit=payload.limit,
-        force_refresh=payload.forceRefresh
+        force_refresh=payload.forceRefresh,
+        selected_product_id=payload.selectedProductId,
+        selected_category=payload.selectedCategory,
+        selected_style=payload.selectedStyle,
+        selected_color=payload.selectedColor
     )
 
     if not res.get("success", False):

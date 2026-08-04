@@ -1,6 +1,9 @@
 from typing import Any, Dict
 
-import torch
+try:
+    import torch
+except ImportError:
+    torch = None
 
 from app.services.ai.engines.common.exceptions import DeviceUnavailableError
 from app.utils.logger import logger
@@ -13,6 +16,9 @@ class DeviceManager:
     def resolve(requested_device: str = "auto") -> str:
         """Resolves target device string ('auto', 'cuda', 'cpu', 'mps')."""
         req = requested_device.lower().strip()
+
+        if torch is None:
+            return "cpu"
 
         if req == "auto":
             if torch.cuda.is_available():
@@ -59,6 +65,14 @@ class DeviceManager:
     @staticmethod
     def describe() -> Dict[str, Any]:
         """Returns diagnostic details for available execution hardware."""
+        if torch is None:
+            return {
+                "cuda_available": False,
+                "pytorch_version": "not_installed",
+                "device_count": 0,
+                "device_name": "CPU",
+            }
+
         cuda_avail = torch.cuda.is_available()
         info: Dict[str, Any] = {
             "cuda_available": cuda_avail,
@@ -77,3 +91,4 @@ class DeviceManager:
             info["device_name"] = "CPU"
 
         return info
+

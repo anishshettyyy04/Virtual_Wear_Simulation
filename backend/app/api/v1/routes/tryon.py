@@ -78,6 +78,11 @@ async def create_virtual_tryon(
     """Handles multipart try-on upload and routes to sync or async execution."""
     t_start = time.perf_counter()
     request_id = getattr(request.state, "request_id", None)
+    logger.info(
+        f"[BACKEND:TRYON:REQUEST] Received request request_id={request_id}, "
+        f"person_file={person_image.filename}, garment_file={garment_image.filename}, "
+        f"garment_category={garment_category}, engine={engine}, sync={sync}"
+    )
     upload_service = UploadService()
 
     person_path: Optional[str] = None
@@ -137,9 +142,14 @@ async def create_virtual_tryon(
             category=parsed_category,
         )
 
+        logger.info("[BACKEND:TRYON:INFERENCE] starting inference")
         t_pipe_start = time.perf_counter()
         result = await pipeline.run(person_input, garment_input)
         t_pipe_end = time.perf_counter()
+        logger.info(
+            f"[BACKEND:TRYON:INFERENCE_COMPLETE] output_type={type(result).__name__}, "
+            f"output_ref={result.final.output_ref}"
+        )
         pipe_duration_ms = (t_pipe_end - t_pipe_start) * 1000.0
 
         t_total_end = time.perf_counter()

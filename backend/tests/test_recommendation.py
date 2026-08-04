@@ -158,6 +158,39 @@ class TestRecommendationEngineOptimization(unittest.TestCase):
         rec_ids = [r['productId'] for r in res['recommendations']]
         self.assertEqual(len(rec_ids), len(set(rec_ids)))
 
+    def test_guest_session_fallback_identity(self):
+        """Test that dynamic guest session IDs resolve to fallback preferences cleanly."""
+        res = self.engine.generate_recommendations("GUEST_SESSION_TEST_123", limit=5)
+        self.assertTrue(res['success'])
+        self.assertEqual(res['userId'], "GUEST_SESSION_TEST_123")
+        self.assertGreater(len(res['recommendations']), 0)
+
+    def test_context_aware_recommendation_personalization(self):
+        """Test that recommendation scoring adjusts based on active garment context."""
+        res_tshirt = self.engine.generate_recommendations(
+            "GUEST_SESSION_CTX", limit=5, selected_category="tshirt"
+        )
+        res_jeans = self.engine.generate_recommendations(
+            "GUEST_SESSION_CTX", limit=5, selected_category="jeans"
+        )
+
+        top_tshirt_cat = res_tshirt['recommendations'][0]['category']
+        top_jeans_cat = res_jeans['recommendations'][0]['category']
+
+        self.assertEqual(top_tshirt_cat, "tshirt")
+        self.assertEqual(top_jeans_cat, "jeans")
+
+    def test_composite_cache_key_isolation(self):
+        """Test that composite cache keys isolate recommendations by context."""
+        cache = RecommendationCache(ttl_seconds=300, enabled=True)
+        engine = RecommendationEngine()
+        engine.cache = cache
+
+        res1 = engine.generate_recommendations("GUEST_CACHE", selected_category="tshirt")
+        res2 = engine.generate_recommendations("GUEST_CACHE", selected_category="jeans")
+
+        self.assertEqual(cache.get_stats()['activeEntries'], 2)
+
 
 if __name__ == '__main__':
     unittest.main()

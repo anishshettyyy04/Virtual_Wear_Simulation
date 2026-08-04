@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo, useContext } from 'react';
 import { APP_CONFIG } from '@/constants/appConfig';
 import { simulationService } from '@/services/simulationService';
 import { validateImageFile } from '@/utils/imageValidation';
 import { SimulationContext } from './SimulationContext';
+import { AuthContext } from './AuthContext';
 
 // Helper to revoke blob URLs safely
 const revokeBlobUrl = (url) => {
@@ -13,6 +14,46 @@ const revokeBlobUrl = (url) => {
       // Ignore URL revocation errors
     }
   }
+};
+
+// Helper to generate dynamic guest session ID
+function getGuestSessionId() {
+  try {
+    let guestId = sessionStorage.getItem('virtual_wear_guest_session_id');
+    if (!guestId) {
+      guestId = `GUEST_SESSION_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}`;
+      sessionStorage.setItem('virtual_wear_guest_session_id', guestId);
+    }
+    return guestId;
+  } catch {
+    return `GUEST_SESSION_${Date.now()}`;
+  }
+}
+
+// Helper to create a fallback image File if fetching preview URL fails
+const createFallbackImageFile = (filename, label = 'Sample') => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, 512, 512);
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, 256, 256);
+  }
+  const dataUrl = canvas.toDataURL('image/jpeg');
+  const arr = dataUrl.split(',');
+  const mime = arr[0].match(/:(.*?);/)[1];
+  const bstr = atob(arr[1]);
+  let n = bstr.length;
+  const u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new File([u8arr], filename, { type: mime });
 };
 
 export const SimulationProvider = ({ children }) => {
@@ -27,9 +68,35 @@ export const SimulationProvider = ({ children }) => {
 
   const [simulationResult, setSimulationResult] = useState(null);
   const [resultImage, setResultImage] = useState(null);
-  const [error, setError] = useState(null);
+  const [error, setErrorState] = useState(null);
+
+  const setError = useCallback((err) => {
+    if (!err) {
+      setErrorState(null);
+    } else if (typeof err === 'object') {
+      setErrorState(err.message || JSON.stringify(err));
+    } else {
+      setErrorState(String(err));
+    }
+  }, []);
+
   const [settings, setSettings] = useState(APP_CONFIG.SIMULATION_DEFAULTS);
-  const [modelStatus, setModelStatus] = useState({ isReady: true, name: 'VirtualWear-v2' });
+  const [modelStatus, setModelStatus] = useState({ isReady: false, name: 'Connecting...' });
+  const auth = useContext(AuthContext);
+  const user = auth?.user;
+
+  // Fetch model status on mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStatus = async () => {
+      const status = await simulationService.checkModelStatus();
+      if (isMounted) {
+        setModelStatus(status);
+      }
+    };
+    fetchStatus();
+    return () => { isMounted = false; };
+  }, []);
 
   // Keep track of all active Object URLs for unmount cleanup
   const activeBlobUrlsRef = useRef(new Set());
@@ -80,7 +147,14 @@ export const SimulationProvider = ({ children }) => {
           previewUrl = createTrackedObjectURL(file);
         } else if (typeof input === 'object') {
           file = input.file || null;
-          previewUrl = input.previewUrl || (file ? createTrackedObjectURL(file) : null);
+          // Always create a context-owned blob URL from File to survive
+          // component unmounts (e.g. navigating from Upload → Result).
+          // The upload hook's blob URL gets revoked on unmount, breaking display.
+          if (file) {
+            previewUrl = createTrackedObjectURL(file);
+          } else {
+            previewUrl = input.previewUrl || null;
+          }
         }
 
         return { file, previewUrl };
@@ -91,7 +165,7 @@ export const SimulationProvider = ({ children }) => {
         prevStatus === 'completed' || prevStatus === 'failed' ? 'idle' : prevStatus
       );
     },
-    [createTrackedObjectURL, releaseTrackedObjectURL]
+    [createTrackedObjectURL, releaseTrackedObjectURL, setError]
   );
 
   // Action: Remove Person Image
@@ -125,7 +199,11 @@ export const SimulationProvider = ({ children }) => {
           previewUrl = createTrackedObjectURL(file);
         } else if (typeof input === 'object') {
           file = input.file || null;
-          previewUrl = input.previewUrl || (file ? createTrackedObjectURL(file) : null);
+          if (file) {
+            previewUrl = createTrackedObjectURL(file);
+          } else {
+            previewUrl = input.previewUrl || null;
+          }
         }
 
         return { file, previewUrl, id, title };
@@ -136,7 +214,7 @@ export const SimulationProvider = ({ children }) => {
         prevStatus === 'completed' || prevStatus === 'failed' ? 'idle' : prevStatus
       );
     },
-    [createTrackedObjectURL, releaseTrackedObjectURL]
+    [createTrackedObjectURL, releaseTrackedObjectURL, setError]
   );
 
   // Action: Remove Garment Image
@@ -166,7 +244,7 @@ export const SimulationProvider = ({ children }) => {
     setError(null);
     setProgress(0);
     setSimulationStatus('idle');
-  }, [releaseTrackedObjectURL]);
+  }, [releaseTrackedObjectURL, setError]);
 
   // Action: Update Settings
   const updateSettings = useCallback((newSettings) => {
@@ -178,7 +256,7 @@ export const SimulationProvider = ({ children }) => {
     setError(errorMsg);
     setSimulationStatus('failed');
     setProgress(0);
-  }, []);
+  }, [setError]);
 
   // Action: Update Progress
   const updateProgress = useCallback((val) => {
@@ -245,28 +323,118 @@ export const SimulationProvider = ({ children }) => {
       setSimulationStatus('processing');
       setProgress(55);
 
-      const result = await simulationService.processSimulation(formData);
+      const userId = user?.id || user?.userId || getGuestSessionId();
+      const currentCategory = selectedCategory || selectedGarment?.category || 'upper_body';
+      const currentProductId = selectedGarment?.id || selectedGarment?.productId;
+      
+      // 1. Fetch Context-Aware Recommendations
+      const recommendationResult = await simulationService.processSimulation({
+        userId,
+        limit: 10,
+        forceRefresh: false,
+        selectedCategory: currentCategory,
+        selectedProductId: currentProductId,
+      });
+
+      // 2. Prepare File Objects for AI TryOn Pipeline (POST /api/v1/tryon)
+      let pFile = personImage?.file;
+      if (!pFile && personImage?.previewUrl) {
+        try {
+          const blobRes = await fetch(personImage.previewUrl);
+          if (blobRes.ok) {
+            const blobData = await blobRes.blob();
+            pFile = new File([blobData], 'user_avatar.jpg', { type: blobData.type || 'image/jpeg' });
+          }
+        } catch {
+          pFile = null;
+        }
+      }
+      if (!pFile) {
+        pFile = createFallbackImageFile('user_avatar.jpg', 'User Avatar');
+      }
+
+      let gFile = garmentImage?.file;
+      const garmentRefUrl = garmentImage?.previewUrl || selectedGarment?.image || selectedGarment?.previewUrl;
+      if (!gFile && garmentRefUrl) {
+        try {
+          const blobRes = await fetch(garmentRefUrl);
+          if (blobRes.ok) {
+            const blobData = await blobRes.blob();
+            gFile = new File([blobData], 'garment_item.jpg', { type: blobData.type || 'image/jpeg' });
+          }
+        } catch {
+          gFile = null;
+        }
+      }
+      if (!gFile) {
+        gFile = createFallbackImageFile('garment_item.jpg', 'Garment Item');
+      }
+
+      console.log('[TRYON:PREPARED_FILES]', {
+        personFileName: pFile.name,
+        personFileSize: pFile.size,
+        garmentFileName: gFile.name,
+        garmentFileSize: gFile.size
+      });
+
+      // 3. Execute Core AI TryOn Neural Pipeline (POST /api/v1/tryon)
+      let tryonResult = null;
+      let renderedImageUrl = null;
+      if (pFile && gFile) {
+        try {
+          const category = selectedCategory || selectedGarment?.category || 'upper_body';
+          tryonResult = await simulationService.executeTryOn({
+            personFile: pFile,
+            garmentFile: gFile,
+            garmentCategory: category === 'pants' || category === 'jeans' ? 'lower_body' : category === 'dress' ? 'full_body' : 'upper_body',
+            engine: 'idm_vton',
+            sync: true
+          });
+
+          if (tryonResult?.image_ref) {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000';
+            const serverBase = apiBase.replace(/\/api\/v1\/?$/, '').replace(/\/api\/?$/, '');
+            const cleanPath = tryonResult.image_ref.replace(/\\/g, '/').replace(/^\//, '');
+            // Add cache-busting timestamp to prevent browser from serving stale cached image
+            renderedImageUrl = `${serverBase}/${cleanPath}?t=${Date.now()}`;
+            console.log('[TRYON:IMAGE_REF]', tryonResult.image_ref);
+            console.log('[TRYON:RENDERED_URL]', renderedImageUrl);
+          } else {
+            console.warn('[TRYON:RESPONSE] No image_ref in response:', tryonResult);
+          }
+        } catch (tryonErr) {
+          // Surface error to user instead of silently falling back to recommendation image
+          const errMsg = tryonErr?.message || 'AI Try-On inference failed. Please try again.';
+          console.error('[TRYON:ERROR]', errMsg, tryonErr);
+          setError(errMsg);
+        }
+      }
+
+      const topRecImage = recommendationResult?.recommendations?.[0]?.image;
+      const finalImage = renderedImageUrl || topRecImage || personImage?.previewUrl;
 
       const finalResult = {
-        ...result,
+        ...recommendationResult,
+        tryon: tryonResult,
+        renderedImageUrl: finalImage,
         originalImageUrl: personImage.previewUrl,
-        garmentImageUrl: garmentImage.previewUrl,
+        garmentImageUrl: garmentImage.previewUrl || selectedGarment?.image,
       };
 
       setSimulationResult(finalResult);
-      setResultImage(finalResult.renderedImageUrl || finalResult.url || null);
+      setResultImage(finalImage);
       setSimulationStatus('completed');
       setProgress(100);
 
       return finalResult;
     } catch (err) {
-      const errorMsg = err.message || 'Simulation process failed. Please try again.';
+      const errorMsg = typeof err === 'object' ? (err.message || 'Simulation process failed. Please try again.') : String(err);
       setError(errorMsg);
       setSimulationStatus('failed');
       setProgress(0);
       return null;
     }
-  }, [personImage, garmentImage, selectedGarment, selectedCategory, settings]);
+  }, [personImage, garmentImage, selectedGarment, selectedCategory, settings, user, setError]);
 
   // Derived state flags for backward compatibility
   const isProcessing = simulationStatus === 'uploading' || simulationStatus === 'processing';

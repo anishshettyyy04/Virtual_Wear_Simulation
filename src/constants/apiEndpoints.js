@@ -7,18 +7,19 @@ export const API_ENDPOINTS = {
     LOGOUT: '/auth/logout',
   },
   SIMULATION: {
-    PROCESS: '/simulation/process',
+    PROCESS: '/recommendations',
+    TRYON: '/tryon',
     STATUS: '/simulation/status',
     CANCEL: '/simulation/cancel',
     HISTORY: '/simulation/history',
   },
   GARMENTS: {
-    LIST: '/garments',
-    CATEGORIES: '/garments/categories',
-    UPLOAD: '/garments/upload',
+    LIST: '/products',
+    CATEGORIES: '/products/categories',
+    UPLOAD: '/products/upload',
   },
   AI_MODEL: {
-    STATUS: '/ai/status',
+    STATUS: '/health',
     PRELOAD: '/ai/preload',
   },
 };

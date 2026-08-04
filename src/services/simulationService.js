@@ -3,53 +3,128 @@ import { API_ENDPOINTS } from '@/constants/apiEndpoints';
 
 export const simulationService = {
   /**
-   * Submit avatar image and garment data for virtual wear simulation.
-   * @param {FormData} payload
-   * @returns {Promise<object>}
+   * Fetch all garments (products) from the backend.
+   * @returns {Promise<Array>}
    */
-  async processSimulation(payload) {
-    const isMock = import.meta.env.VITE_ENABLE_AI_SIMULATION_MOCK === 'true';
-    
-    if (isMock) {
-      // Return realistic mock response for demo / client development
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      return {
-        id: 'sim_' + Date.now(),
-        status: 'completed',
-        fitConfidence: 0.94,
-        fitType: payload.get ? payload.get('fitType') || 'regular' : 'regular',
-        renderedImageUrl: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&q=80&w=1000',
-        originalImageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=1000',
-        metrics: {
-          shoulderFit: '98% Alignment',
-          waistDrape: 'Optimal Tension',
-          fabricWeightMatch: 'Medium Weight 240GSM',
-        },
-        processedAt: new Date().toISOString(),
-      };
-    }
-
-    const response = await api.post(API_ENDPOINTS.SIMULATION.PROCESS, payload, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-    return response.data;
+  async getProducts() {
+    const response = await api.get(API_ENDPOINTS.GARMENTS.LIST);
+    const data = response.data?.data || response.data;
+    return data || [];
   },
 
   /**
-   * Check status of remote AI model server.
+   * Execute AI Virtual Try-On Pipeline via POST /api/v1/tryon.
+   * @param {Object} params - { personFile, garmentFile, garmentCategory, engine, sync }
+   * @returns {Promise<Object>}
+   */
+  async executeTryOn({ personFile, garmentFile, garmentCategory = 'upper_body', engine = 'idm_vton', sync = true }) {
+    const formData = new FormData();
+
+    const pAttached = personFile instanceof File ? personFile : personFile?.file;
+    if (pAttached) {
+      formData.append('person_image', pAttached, pAttached.name || 'person.jpg');
+    }
+
+    const gAttached = garmentFile instanceof File ? garmentFile : garmentFile?.file;
+    if (gAttached) {
+      formData.append('garment_image', gAttached, gAttached.name || 'garment.jpg');
+    }
+
+    formData.append('garment_category', garmentCategory);
+    formData.append('engine', engine);
+    formData.append('sync', String(sync));
+
+    const requestPayloadInfo = {
+      person_image_filename: pAttached?.name || 'person.jpg',
+      person_image_size: pAttached?.size || 0,
+      garment_image_filename: gAttached?.name || 'garment.jpg',
+      garment_image_size: gAttached?.size || 0,
+      garment_category: garmentCategory,
+      engine: engine,
+      sync: sync,
+    };
+
+    console.log('[TRYON:REQUEST]', requestPayloadInfo);
+
+    try {
+      const response = await api.post(API_ENDPOINTS.SIMULATION.TRYON, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        timeout: 180000, // 3 minutes — AI inference takes ~38s + upload/preprocessing
+      });
+
+      const result = response.data?.data || response.data;
+      console.log('[TRYON:RESPONSE]', {
+        status: response.status,
+        hasData: Boolean(result),
+        image_ref: result?.image_ref || 'MISSING',
+        result_id: result?.result_id || 'MISSING',
+        engine: result?.engine || 'MISSING',
+        timings: result?.timings || null,
+      });
+      return result;
+    } catch (err) {
+      console.error('[TRYON:ERROR]', {
+        message: err?.message || String(err),
+        status: err?.response?.status,
+        timeout: err?.code === 'ECONNABORTED',
+      });
+      throw err;
+    }
+  },
+
+  /**
+   * Request product recommendations for a user with context parameters.
+   * @param {Object} params - { userId: string, limit?: number, forceRefresh?: boolean, selectedCategory?: string, selectedProductId?: string, selectedStyle?: string, selectedColor?: string }
+   * @returns {Promise<object>}
+   */
+  async processSimulation({
+    userId,
+    limit = 10,
+    forceRefresh = false,
+    selectedCategory,
+    selectedProductId,
+    selectedStyle,
+    selectedColor
+  }) {
+    if (!userId) {
+      throw new Error('User ID is required for recommendations');
+    }
+
+    const jsonPayload = {
+      userId,
+      limit,
+      forceRefresh,
+      ...(selectedCategory && { selectedCategory }),
+      ...(selectedProductId && { selectedProductId }),
+      ...(selectedStyle && { selectedStyle }),
+      ...(selectedColor && { selectedColor }),
+    };
+
+    const response = await api.post(API_ENDPOINTS.SIMULATION.PROCESS, jsonPayload);
+    
+    // Return the actual backend RecommendationResponse data
+    return response.data?.data || response.data;
+  },
+
+  /**
+   * Check status of backend API health.
    */
   async checkModelStatus() {
     try {
       const response = await api.get(API_ENDPOINTS.AI_MODEL.STATUS);
-      return response.data;
-    } catch {
+      const data = response.data?.data || response.data;
       return {
-        isReady: true,
-        modelName: 'VirtualWear-Diffusion-v2',
-        gpuActive: true,
-        latencyMs: 120,
+        isReady: data?.status === 'healthy' || data?.status === 'degraded',
+        modelName: 'Backend System',
+        details: data
+      };
+    } catch (error) {
+      return {
+        isReady: false,
+        modelName: 'Backend System',
+        error: typeof error === 'object' ? (error.message || 'Failed to connect to backend.') : String(error)
       };
     }
   },

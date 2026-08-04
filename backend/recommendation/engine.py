@@ -111,27 +111,31 @@ class RecommendationEngine:
         self._load_data()
         return self._users_cache.get(user_id)
 
-    def generate_recommendations(self, user_id, limit=None, force_refresh=False):
+    def generate_recommendations(
+        self,
+        user_id,
+        limit=None,
+        force_refresh=False,
+        selected_product_id=None,
+        selected_category=None,
+        selected_style=None,
+        selected_color=None
+    ):
         """
-        Generates personalized product recommendations for user_id with cache lookup and versioning.
-
-        Args:
-            user_id (str): Target user identifier code.
-            limit (int, optional): Maximum recommendations. Defaults to config limit.
-            force_refresh (bool): If True, bypasses cache and recomputes score.
-
-        Returns:
-            dict: Versioned response envelope adhering to recommendation.schema.json.
+        Generates personalized product recommendations with dynamic context awareness,
+        guest session fallback, composite cache lookup, and versioning.
         """
         start_time = time.perf_counter()
         strategy_name = getattr(self.strategy, '__class__', {}).__name__.replace("Strategy", "")
 
+        # Compute composite cache key including context parameters
+        cache_key = f"{user_id}:{selected_category or ''}:{selected_product_id or ''}:{selected_style or ''}:{selected_color or ''}"
+
         # 1. Check Cache
         if self.cache and not force_refresh:
-            cached_res = self.cache.get(user_id)
+            cached_res = self.cache.get(cache_key)
             if cached_res:
                 log_cache_event("hit", user_id)
-                # Update timing metric for cached retrieval
                 cached_res["executionTimeMs"] = round((time.perf_counter() - start_time) * 1000, 2)
                 return cached_res
             else:
@@ -157,24 +161,48 @@ class RecommendationEngine:
                 "recommendations": []
             }
 
+        # Resolve user preference profile with guest session fallback
         user_preference = self._users_cache.get(user_id)
         if not user_preference:
-            exec_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
-            logger.warning(f"User ID '{user_id}' not found in user preferences dataset")
-            return {
-                "success": False,
-                "message": f"User ID '{user_id}' not found",
-                "engineVersion": self.ENGINE_VERSION,
-                "strategy": strategy_name,
-                "configVersion": self.CONFIG_VERSION,
-                "executionTimeMs": exec_time_ms,
-                "productsScanned": len(self._products_cache),
-                "productsFiltered": 0,
-                "recommendationsReturned": 0,
-                "userId": str(user_id) if user_id else "unknown",
-                "generatedAt": datetime.now(timezone.utc).isoformat(),
-                "recommendations": []
-            }
+            is_guest = str(user_id).startswith("GUEST_") or str(user_id).startswith("guest") or "guest" in str(user_id).lower()
+            base_profile = self._users_cache.get("USR001") if is_guest else None
+
+            if base_profile:
+                user_preference = json.loads(json.dumps(base_profile))
+                user_preference["userId"] = str(user_id)
+            else:
+                exec_time_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                logger.warning(f"User ID '{user_id}' not found in user preferences dataset")
+                return {
+                    "success": False,
+                    "message": f"User ID '{user_id}' not found",
+                    "engineVersion": self.ENGINE_VERSION,
+                    "strategy": strategy_name,
+                    "configVersion": self.CONFIG_VERSION,
+                    "executionTimeMs": exec_time_ms,
+                    "productsScanned": len(self._products_cache),
+                    "productsFiltered": 0,
+                    "recommendationsReturned": 0,
+                    "userId": str(user_id) if user_id else "unknown",
+                    "generatedAt": datetime.now(timezone.utc).isoformat(),
+                    "recommendations": []
+                }
+        else:
+            user_preference = json.loads(json.dumps(user_preference))
+
+        # Augment preference profile with real-time selection context
+        if selected_category:
+            user_preference['selectedCategory'] = selected_category
+            cats = user_preference.get('preferredCategories', [])
+            user_preference['preferredCategories'] = [selected_category] + [c for c in cats if c != selected_category]
+        if selected_style:
+            styles = user_preference.get('preferredStyles', [])
+            user_preference['preferredStyles'] = [selected_style] + [s for s in styles if s != selected_style]
+        if selected_color:
+            colors = user_preference.get('preferredColors', [])
+            user_preference['preferredColors'] = [selected_color] + [c for c in colors if c.lower() != selected_color.lower()]
+        if selected_product_id:
+            user_preference['contextProductId'] = selected_product_id
 
         rec_limit = limit if limit is not None else config.get('limits', {}).get('maxRecommendations', 10)
 
@@ -198,14 +226,14 @@ class RecommendationEngine:
             "productsScanned": scanned_count,
             "productsFiltered": filtered_count,
             "recommendationsReturned": len(recommendations),
-            "userId": user_id,
+            "userId": str(user_id),
             "generatedAt": datetime.now(timezone.utc).isoformat(),
             "recommendations": recommendations
         }
 
-        # Store in Cache
+        # Store in Cache using composite key
         if self.cache:
-            self.cache.set(user_id, response_payload)
+            self.cache.set(cache_key, response_payload)
 
         # Save History
         if self.history_manager:

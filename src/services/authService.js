@@ -22,27 +22,12 @@ export const authService = {
       return { user: mockUser, token: mockToken };
     }
 
-    try {
-      const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
-      const data = response.data;
-      return {
-        user: data.user || data.data?.user || data,
-        token: data.token || data.access_token || data.data?.token,
-      };
-    } catch (error) {
-      // Fallback for development if backend auth endpoints are not live yet
-      if (import.meta.env.DEV && (!error.status || error.status === 404)) {
-        const fallbackUser = {
-          id: 'usr_fallback_' + Date.now(),
-          name: credentials.email ? credentials.email.split('@')[0] : 'Guest User',
-          email: credentials.email || 'guest@virtualwear.ai',
-          role: 'Creator',
-        };
-        const fallbackToken = 'fallback_jwt_token_' + Date.now();
-        return { user: fallbackUser, token: fallbackToken };
-      }
-      throw error;
-    }
+    const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
+    const data = response.data;
+    return {
+      user: data.user || data.data?.user || data,
+      token: data.token || data.access_token || data.data?.token,
+    };
   },
 
   /**
@@ -65,26 +50,12 @@ export const authService = {
       return { user: mockUser, token: mockToken };
     }
 
-    try {
-      const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, userData);
-      const data = response.data;
-      return {
-        user: data.user || data.data?.user || data,
-        token: data.token || data.access_token || data.data?.token,
-      };
-    } catch (error) {
-      if (import.meta.env.DEV && (!error.status || error.status === 404)) {
-        const fallbackUser = {
-          id: 'usr_reg_' + Date.now(),
-          name: userData.name || 'Registered User',
-          email: userData.email || 'user@virtualwear.ai',
-          role: 'Creator',
-        };
-        const fallbackToken = 'fallback_jwt_token_' + Date.now();
-        return { user: fallbackUser, token: fallbackToken };
-      }
-      throw error;
-    }
+    const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, userData);
+    const data = response.data;
+    return {
+      user: data.user || data.data?.user || data,
+      token: data.token || data.access_token || data.data?.token,
+    };
   },
 
   /**
@@ -105,22 +76,10 @@ export const authService = {
       };
     }
 
-    try {
-      const response = await api.get(API_ENDPOINTS.AUTH.ME, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      return response.data?.user || response.data;
-    } catch (error) {
-      if (import.meta.env.DEV && (!error.status || error.status === 404)) {
-        return {
-          id: 'usr_restored_123',
-          name: 'Restored User',
-          email: 'user@virtualwear.ai',
-          role: 'Creator',
-        };
-      }
-      throw error;
-    }
+    const response = await api.get(API_ENDPOINTS.AUTH.ME, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data?.user || response.data;
   },
 
   /**

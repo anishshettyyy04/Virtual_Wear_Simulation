@@ -64,6 +64,11 @@ class RecommendationScorer:
         else:
             breakdown['category'] = 0.0
 
+        # Primary Active Category Context Boost
+        selected_cat = user_preference.get('selectedCategory')
+        if selected_cat and product.get('category') == selected_cat:
+            breakdown['context_category_boost'] = 40.0
+
         # 2. Style Score
         preferred_styles = user_preference.get('preferredStyles', [])
         w_style = float(weights.get('style', 20))

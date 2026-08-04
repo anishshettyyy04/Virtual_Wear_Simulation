@@ -17,7 +17,7 @@ export const ErrorMessage = ({
       <AlertCircle size={20} className="shrink-0 text-rose-400 mt-0.5" />
       <div className="flex-1 text-xs">
         <strong className="block text-sm font-semibold text-rose-200 mb-0.5">{title}</strong>
-        <span>{message}</span>
+        <span>{typeof message === 'object' ? (message?.message || JSON.stringify(message)) : String(message)}</span>
       </div>
       {onRetry && (
         <Button variant="ghost" size="sm" onClick={onRetry} className="shrink-0 text-rose-300 hover:text-white">

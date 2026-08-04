@@ -73,6 +73,10 @@ class RecommendationRequest(BaseModel):
     userId: str = Field(..., description="Target user identifier", json_schema_extra={"example": "USR001"})
     limit: Optional[int] = Field(10, description="Max recommendations count", json_schema_extra={"example": 10}, ge=1, le=50)
     forceRefresh: Optional[bool] = Field(False, description="Bypass cache flag", json_schema_extra={"example": False})
+    selectedProductId: Optional[str] = Field(None, description="Selected garment product ID", json_schema_extra={"example": "TS001"})
+    selectedCategory: Optional[str] = Field(None, description="Selected garment category", json_schema_extra={"example": "tshirt"})
+    selectedStyle: Optional[str] = Field(None, description="Selected style genre", json_schema_extra={"example": "casual"})
+    selectedColor: Optional[str] = Field(None, description="Selected garment color", json_schema_extra={"example": "Black"})
 
 
 class RecommendationItemResponse(BaseModel):

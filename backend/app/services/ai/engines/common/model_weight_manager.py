@@ -38,12 +38,21 @@ class ModelWeightManager:
     def list_missing(self) -> List[str]:
         """Inspects directory and returns list of missing required file paths."""
         missing: List[str] = []
-        if not self.model_dir.exists():
+        target_base = self.model_dir
+        if not target_base.exists() and (Path("backend") / target_base).exists():
+            target_base = Path("backend") / target_base
+
+        if not target_base.exists():
             return [str(self.model_dir / file_rel) for file_rel in self.required_files]
 
         for file_rel in self.required_files:
-            file_path = self.model_dir / file_rel
+            file_path = target_base / file_rel
             if not file_path.exists():
+                # Check for .bin equivalent if .safetensors is specified
+                if file_rel.endswith(".safetensors"):
+                    bin_alt = target_base / file_rel.replace(".safetensors", ".bin")
+                    if bin_alt.exists():
+                        continue
                 missing.append(file_rel)
 
         return missing

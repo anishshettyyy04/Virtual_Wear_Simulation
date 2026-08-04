@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useImageUpload } from '@/hooks/useImageUpload';
 import { UploadDropzone } from '@/components/upload/UploadDropzone';
 import { ImagePreview } from '@/components/upload/ImagePreview';
@@ -28,6 +29,15 @@ export const ImageUploadSection = ({ onImageChange }) => {
     replaceImage,
     clearError,
   } = useImageUpload({ maxSizeMB: 10 });
+
+  useEffect(() => {
+    if (selectedImage && previewURL) {
+      console.log('[UPLOAD]', selectedImage.name, selectedImage.size, previewURL);
+      if (onImageChange) {
+        onImageChange({ file: selectedImage, previewUrl: previewURL });
+      }
+    }
+  }, [selectedImage, previewURL, onImageChange]);
 
   // Notify parent component if callback exists
   const handleRemove = () => {

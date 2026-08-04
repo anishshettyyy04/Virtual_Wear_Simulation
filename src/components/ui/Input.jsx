@@ -36,7 +36,7 @@ export const Input = forwardRef(
           )}
         </div>
         {error ? (
-          <span className="text-xs text-rose-400 mt-0.5">{error}</span>
+          <span className="text-xs text-rose-400 mt-0.5">{typeof error === 'object' ? (error?.message || JSON.stringify(error)) : String(error)}</span>
         ) : helperText ? (
           <span className="text-xs text-slate-400 mt-0.5">{helperText}</span>
         ) : null}

@@ -1,4 +1,4 @@
-import { useNavigate } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Home, AlertTriangle } from 'lucide-react';
 import { SEO } from '@/components/common/SEO';
 import { Button } from '@/components/ui/Button';

@@ -65,8 +65,16 @@ class RuleBasedStrategy(BaseRecommendationStrategy):
                 "reasons": reasons
             })
 
-        # O(n log n) ranking descending by normalized score
-        ranked = sorted(candidates, key=lambda x: x['score'], reverse=True)
+        # O(n log n) ranking descending by normalized score with active category tie-breaker
+        selected_cat = user_preference.get('selectedCategory')
+        ranked = sorted(
+            candidates,
+            key=lambda x: (
+                x['score'],
+                1 if selected_cat and x['category'] == selected_cat else 0
+            ),
+            reverse=True
+        )
 
         # Deduplication
         seen = set()

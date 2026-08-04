@@ -16,10 +16,16 @@ export const parseApiError = (error) => {
   if (error.response) {
     const status = error.response.status;
     const data = error.response.data;
+    const rawError = data?.error;
 
+    // Safely extract string message from response data or nested error object
     const message =
-      data?.message ||
-      data?.error ||
+      (typeof data?.message === 'string' && data.message ? data.message : null) ||
+      (typeof rawError === 'string'
+        ? rawError
+        : typeof rawError === 'object' && typeof rawError?.message === 'string'
+          ? rawError.message
+          : null) ||
       (status === 404
         ? 'Requested endpoint or resource not found.'
         : status === 401
@@ -32,11 +38,19 @@ export const parseApiError = (error) => {
                 ? 'Internal server error occurred on the AI backend.'
                 : 'Request failed with status code ' + status);
 
+    const code =
+      (typeof rawError === 'object' && rawError?.code ? rawError.code : data?.code) ||
+      `HTTP_${status}`;
+
+    const requestId =
+      (typeof rawError === 'object' && rawError?.request_id ? rawError.request_id : data?.request_id) || null;
+
     return {
-      message,
-      code: data?.code || `HTTP_${status}`,
+      message: String(message),
+      code,
       status,
-      details: data?.details || null,
+      requestId,
+      details: data?.details || (typeof rawError === 'object' ? rawError?.details : null) || null,
     };
   }
 
