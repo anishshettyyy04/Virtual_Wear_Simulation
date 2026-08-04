@@ -1,11 +1,11 @@
 {
   "benchmarkSummary": {
-    "timestamp": "2026-07-31T17:28:21Z",
+    "timestamp": "2026-08-04T09:29:21Z",
     "usersTested": 12,
     "totalRuns": 24,
-    "totalDurationSec": 0.0493,
-    "averageLatencyMs": 2.05,
-    "recommendationsPerSecond": 486.9,
+    "totalDurationSec": 0.2793,
+    "averageLatencyMs": 11.64,
+    "recommendationsPerSecond": 85.9,
     "productsProcessed": 25,
     "cacheStats": {
       "enabled": true,
